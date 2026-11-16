@@ -1,0 +1,64 @@
+# ==============================================================================
+# FREE INCOME BD — GIT IGNORE CONFIGURATION
+# ==============================================================================
+
+# 1. Node Dependencies & Package Caches
+node_modules/
+.npm/
+.pnpm-store/
+
+# 2. Production Build Output & Artifacts
+dist/
+dist-ssr/
+build/
+out/
+*.local
+*.zip
+*.tar.gz
+
+# 3. Environment Variables & Local Secrets (NEVER COMMIT)
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+!.env.example
+
+# 4. Server-Side Encrypted Secret Vault & Private Keys
+.server-vault/
+*.pem
+*.key
+*.p12
+service-account*.json
+
+# 5. Logs & Debug Dumps
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+firestore-debug.log*
+firebase-debug.log*
+ui-debug.log*
+
+# 6. TypeScript & Vite Caches
+*.tsbuildinfo
+.vite/
+.eslintcache
+
+# 7. Editor & OS Directories
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

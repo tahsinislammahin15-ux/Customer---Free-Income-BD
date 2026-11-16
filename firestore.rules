@@ -1,0 +1,205 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 2 && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    // Database-enforced Admin RBAC (Bootstrapped Owner Email + Verified /admins/{uid} collection)
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'tahsinislammahin15@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isSafeHttpUrl(url, maxLen) {
+      return url is string && url.size() >= 8 && url.size() <= maxLen && url.matches('^https?://.+');
+    }
+
+    // Validation Blueprint: PublicSettings (/settings/public)
+    function isValidPublicSettings(data) {
+      return data.keys().hasAll([
+        'siteName',
+        'siteUrl',
+        'mapEmbedUrl',
+        'facebookUrl',
+        'telegramUrl',
+        'whatsappUrl',
+        'supportEmail',
+        'supportPhone',
+        'officeAddress',
+        'announcementText',
+        'heroHeadline',
+        'heroSubheadline',
+        'updatedAt',
+        'updatedBy'
+      ]) &&
+      data.keys().hasOnly([
+        'siteName',
+        'tagline',
+        'logoUrl',
+        'siteUrl',
+        'mapEmbedUrl',
+        'facebookUrl',
+        'telegramUrl',
+        'whatsappUrl',
+        'supportEmail',
+        'supportPhone',
+        'supportWhatsapp',
+        'supportTelegram',
+        'officeAddress',
+        'announcementText',
+        'announcementTextBn',
+        'heroHeadline',
+        'heroHeadlineBn',
+        'heroSubheadline',
+        'heroSubheadlineBn',
+        'updatedAt',
+        'updatedBy'
+      ]) &&
+      data.siteName is string && data.siteName.size() >= 2 && data.siteName.size() <= 80 &&
+      (!('tagline' in data) || (data.tagline is string && data.tagline.size() >= 2 && data.tagline.size() <= 200)) &&
+      (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 400)) &&
+      isSafeHttpUrl(data.siteUrl, 300) &&
+      isSafeHttpUrl(data.mapEmbedUrl, 500) &&
+      isSafeHttpUrl(data.facebookUrl, 300) &&
+      isSafeHttpUrl(data.telegramUrl, 300) &&
+      isSafeHttpUrl(data.whatsappUrl, 300) &&
+      data.supportEmail is string && data.supportEmail.size() >= 5 && data.supportEmail.size() <= 160 &&
+      data.supportPhone is string && data.supportPhone.size() >= 6 && data.supportPhone.size() <= 40 &&
+      (!('supportWhatsapp' in data) || (data.supportWhatsapp is string && data.supportWhatsapp.size() >= 6 && data.supportWhatsapp.size() <= 40)) &&
+      (!('supportTelegram' in data) || (data.supportTelegram is string && data.supportTelegram.size() >= 2 && data.supportTelegram.size() <= 80)) &&
+      data.officeAddress is string && data.officeAddress.size() >= 5 && data.officeAddress.size() <= 240 &&
+      data.announcementText is string && data.announcementText.size() >= 2 && data.announcementText.size() <= 400 &&
+      (!('announcementTextBn' in data) || (data.announcementTextBn is string && data.announcementTextBn.size() >= 2 && data.announcementTextBn.size() <= 400)) &&
+      data.heroHeadline is string && data.heroHeadline.size() >= 2 && data.heroHeadline.size() <= 200 &&
+      (!('heroHeadlineBn' in data) || (data.heroHeadlineBn is string && data.heroHeadlineBn.size() >= 2 && data.heroHeadlineBn.size() >= 2 && data.heroHeadlineBn.size() <= 200)) &&
+      data.heroSubheadline is string && data.heroSubheadline.size() >= 2 && data.heroSubheadline.size() <= 500 &&
+      (!('heroSubheadlineBn' in data) || (data.heroSubheadlineBn is string && data.heroSubheadlineBn.size() >= 2 && data.heroSubheadlineBn.size() <= 500)) &&
+      data.updatedAt == request.time &&
+      data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+      data.updatedBy == request.auth.uid;
+    }
+
+    // Validation Blueprint: AdminRecord (/admins/{adminId})
+    function isValidAdminRecord(data, adminId) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'mustChangePassword', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'role', 'mustChangePassword', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid == adminId &&
+        data.email is string && data.email.size() >= 5 && data.email.size() <= 160 &&
+        data.role == 'admin' &&
+        data.mustChangePassword is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: CatalogItem (/catalog/{itemId})
+    function isValidCatalogItem(data, itemId) {
+      return data.keys().hasAll(['id', 'category', 'title', 'priceOrRewardBdt', 'active', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'category', 'title', 'priceOrRewardBdt', 'active', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 2 && data.id.size() <= 64 && data.id == itemId &&
+        data.category is string && data.category.size() >= 2 && data.category.size() <= 40 &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 160 &&
+        data.priceOrRewardBdt is number && data.priceOrRewardBdt >= 0 && data.priceOrRewardBdt <= 500000 &&
+        data.active is bool &&
+        data.updatedAt == request.time;
+    }
+
+    // Validation Blueprint: AuditLog (/audit_logs/{logId})
+    function isValidAuditLog(data, logId) {
+      return data.keys().hasAll(['id', 'adminUid', 'adminEmail', 'action', 'target', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'adminUid', 'adminEmail', 'action', 'target', 'details', 'createdAt']) &&
+        data.id is string && data.id.size() >= 2 && data.id.size() <= 64 && data.id == logId &&
+        data.adminUid is string && data.adminUid.size() >= 1 && data.adminUid.size() <= 128 &&
+        data.adminUid == request.auth.uid &&
+        data.adminEmail is string && data.adminEmail.size() >= 5 && data.adminEmail.size() <= 160 &&
+        data.action is string && data.action.size() >= 2 && data.action.size() <= 80 &&
+        data.target is string && data.target.size() >= 1 && data.target.size() <= 120 &&
+        (!('details' in data) || (data.details is string && data.details.size() >= 1 && data.details.size() <= 400)) &&
+        data.createdAt == request.time;
+    }
+
+    // 1. PUBLIC SETTINGS (/settings/{settingId})
+    match /settings/{settingId} {
+      allow get: if settingId == 'public';
+      allow list: if false;
+      allow create: if isAdmin() && settingId == 'public' && isValidPublicSettings(incoming());
+      allow update: if isAdmin() && settingId == 'public' && isValidPublicSettings(incoming());
+      allow delete: if false;
+    }
+
+    // 2. ADMIN RBAC RECORDS (/admins/{adminId})
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if false;
+      allow create: if isAdmin() && isValidId(adminId) && isValidAdminRecord(incoming(), adminId) && incoming().createdAt == request.time;
+      allow update: if isAdmin() && isValidId(adminId) && isValidAdminRecord(incoming(), adminId) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().uid == existing().uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['mustChangePassword', 'updatedAt', 'email']);
+      allow delete: if false;
+    }
+
+    // 3. PUBLIC CATALOG ITEMS (/catalog/{itemId})
+    match /catalog/{itemId} {
+      allow get: if isValidId(itemId);
+      allow list: if resource.data.active == true || isAdmin();
+      allow create: if isAdmin() && isValidId(itemId) && isValidCatalogItem(incoming(), itemId);
+      allow update: if isAdmin() && isValidId(itemId) && isValidCatalogItem(incoming(), itemId) &&
+        incoming().id == existing().id &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['category', 'title', 'priceOrRewardBdt', 'active', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(itemId);
+    }
+
+    // 4. IMMUTABLE ADMIN AUDIT LOGS (/audit_logs/{logId})
+    match /audit_logs/{logId} {
+      allow get: if isAdmin() && isValidId(logId);
+      allow list: if isAdmin() && resource.data.adminUid is string;
+      allow create: if isAdmin() && isValidId(logId) && isValidAuditLog(incoming(), logId);
+      allow update, delete: if false;
+    }
+
+    // 5. USER WALLETS (/wallets/{userId})
+    // Users can ONLY read their own wallet; Admins can read any user's wallet.
+    // Client SDK writes are strictly forbidden (balance is computed & mutated on the backend only).
+    match /wallets/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin() && resource.data.userId is string;
+      allow create, update, delete: if false;
+    }
+
+    // 6. DOUBLE-ENTRY WALLET LEDGER (/wallet_ledger/{entryId})
+    // Users can ONLY read their own ledger entries; Admins can inspect any user's ledger.
+    // Client SDK writes are strictly forbidden (immutable backend-only double-entry ledger).
+    match /wallet_ledger/{entryId} {
+      allow get: if isSignedIn() && isValidId(entryId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, update, delete: if false;
+    }
+
+    // 7. SERVER-ONLY ENCRYPTED SECRET VAULT (/vault_secrets/{secretId})
+    // Clients can NEVER read or write secret keys (Payment Gateway or UniPin secrets).
+    match /vault_secrets/{secretId} {
+      allow read, write: if false;
+    }
+  }
+}

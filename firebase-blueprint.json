@@ -1,0 +1,163 @@
+{
+  "entities": {
+    "PublicSettings": {
+      "title": "PublicSettings",
+      "description": "Publicly readable website branding, contact details, banners, and validated external URLs edited by the Admin.",
+      "type": "object",
+      "properties": {
+        "siteName": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "tagline": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "logoUrl": { "type": "string", "maxLength": 400 },
+        "siteUrl": { "type": "string", "minLength": 8, "maxLength": 300, "pattern": "^https?://.+" },
+        "mapEmbedUrl": { "type": "string", "minLength": 8, "maxLength": 500, "pattern": "^https?://.+" },
+        "facebookUrl": { "type": "string", "minLength": 8, "maxLength": 300, "pattern": "^https?://.+" },
+        "telegramUrl": { "type": "string", "minLength": 8, "maxLength": 300, "pattern": "^https?://.+" },
+        "whatsappUrl": { "type": "string", "minLength": 8, "maxLength": 300, "pattern": "^https?://.+" },
+        "supportEmail": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "supportPhone": { "type": "string", "minLength": 6, "maxLength": 40 },
+        "supportWhatsapp": { "type": "string", "minLength": 6, "maxLength": 40 },
+        "supportTelegram": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "officeAddress": { "type": "string", "minLength": 5, "maxLength": 240 },
+        "announcementText": { "type": "string", "minLength": 2, "maxLength": 400 },
+        "announcementTextBn": { "type": "string", "minLength": 2, "maxLength": 400 },
+        "heroHeadline": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "heroHeadlineBn": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "heroSubheadline": { "type": "string", "minLength": 2, "maxLength": 500 },
+        "heroSubheadlineBn": { "type": "string", "minLength": 2, "maxLength": 500 },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "updatedBy": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "required": [
+        "siteName",
+        "siteUrl",
+        "mapEmbedUrl",
+        "facebookUrl",
+        "telegramUrl",
+        "whatsappUrl",
+        "supportEmail",
+        "supportPhone",
+        "officeAddress",
+        "announcementText",
+        "heroHeadline",
+        "heroSubheadline",
+        "updatedAt",
+        "updatedBy"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted RBAC document identifying a verified Principal Administrator.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "role": { "type": "string", "enum": ["admin"] },
+        "mustChangePassword": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "mustChangePassword", "createdAt", "updatedAt"]
+    },
+    "CatalogItem": {
+      "title": "CatalogItem",
+      "description": "Publicly readable product package, tournament, task, or news item managed by Admin.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 2, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "category": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "priceOrRewardBdt": { "type": "number" },
+        "active": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "category", "title", "priceOrRewardBdt", "active", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable admin security audit trail entry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "adminUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adminEmail": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "action": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "target": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "details": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "adminUid", "adminEmail", "action", "target", "details", "createdAt"]
+    },
+    "WalletAccount": {
+      "title": "WalletAccount",
+      "description": "Backend-computed double-entry wallet snapshot. Users can ONLY read their own wallet; client SDK writes are strictly forbidden.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 2, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "mainBalance": { "type": "number" },
+        "incomeBalance": { "type": "number" },
+        "bonusBalance": { "type": "number" },
+        "lockedPendingBdt": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "mainBalance", "incomeBalance", "bonusBalance", "lockedPendingBdt", "updatedAt"]
+    },
+    "LedgerEntry": {
+      "title": "LedgerEntry",
+      "description": "Immutable double-entry ledger record created exclusively by the backend. Clients can only read their own entries and never write.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 2, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "direction": { "type": "string", "enum": ["credit", "debit"] },
+        "balanceType": { "type": "string", "enum": ["Main", "Income", "Bonus"] },
+        "amountBdt": { "type": "number" },
+        "type": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "method": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "referenceId": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected", "Completed", "Failed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "direction", "balanceType", "amountBdt", "type", "referenceId", "status", "createdAt"]
+    },
+    "VaultSecret": {
+      "title": "VaultSecret",
+      "description": "Server-only encrypted secret record (completely blocked from client SDK read/write).",
+      "type": "object",
+      "properties": {
+        "secretId": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "ciphertext": { "type": "string", "minLength": 16, "maxLength": 2048 }
+      },
+      "required": ["secretId", "ciphertext"]
+    }
+  },
+  "firestore": {
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/PublicSettings" },
+      "description": "Public site configuration document (/settings/public)."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Authoritative RBAC collection of Principal Administrators."
+    },
+    "/catalog/{itemId}": {
+      "schema": { "$ref": "#/entities/CatalogItem" },
+      "description": "Live catalog items (packages, tournaments, tasks, blog posts) managed by Admin."
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Append-only immutable administrator audit log."
+    },
+    "/wallets/{userId}": {
+      "schema": { "$ref": "#/entities/WalletAccount" },
+      "description": "Backend-authoritative user wallet snapshot; users can only read their own document and can never write."
+    },
+    "/wallet_ledger/{entryId}": {
+      "schema": { "$ref": "#/entities/LedgerEntry" },
+      "description": "Backend-authoritative double-entry ledger; users can only read their own entries and can never write."
+    },
+    "/vault_secrets/{secretId}": {
+      "schema": { "$ref": "#/entities/VaultSecret" },
+      "description": "Server-only encrypted secrets collection; client SDK read and write are strictly denied."
+    }
+  }
+}

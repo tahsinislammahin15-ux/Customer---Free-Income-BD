@@ -1,0 +1,12 @@
+---
+# ==============================================================================
+# cPANEL GIT VERSION CONTROL DEPLOYMENT CONFIGURATION (.cpanel.yml)
+# Placed in `public/.cpanel.yml` so Vite copies it directly into `dist/.cpanel.yml`
+# and it lands at the root of the `deploy` branch automatically.
+# ==============================================================================
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/$USER/public_html/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -Rf * $DEPLOYPATH
+    - /bin/cp -f .htaccess $DEPLOYPATH 2>/dev/null || true

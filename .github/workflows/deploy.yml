@@ -1,0 +1,142 @@
+name: Build & Deploy to cPanel (Static Hosting)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Needed for Option B (pushing built static files to the `deploy` branch)
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    name: Production Build & cPanel Package
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------------------------------
+      # 1. CHECKOUT REPOSITORY
+      # ------------------------------------------------------------------------
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------------
+      # 2. SETUP NODE.JS (PINNED VERSION + NPM CACHE)
+      # ------------------------------------------------------------------------
+      - name: Setup Node.js 22 with npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # ------------------------------------------------------------------------
+      # 3. INSTALL DEPENDENCIES
+      # ------------------------------------------------------------------------
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      # ------------------------------------------------------------------------
+      # 4. TYPECHECK & LINT
+      # ------------------------------------------------------------------------
+      - name: Verify TypeScript compilation (npm run lint)
+        run: npm run lint
+
+      # ------------------------------------------------------------------------
+      # 5. RUN PRODUCTION STATIC BUILD (VITE)
+      # Only public VITE_* variables are passed at build time.
+      # Server-side secrets are NEVER passed into the client build.
+      # ------------------------------------------------------------------------
+      - name: Build production static bundle (dist/)
+        env:
+          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || '/' }}
+          VITE_PUBLIC_SITE_URL: ${{ vars.VITE_PUBLIC_SITE_URL || '' }}
+          VITE_MAP_EMBED_URL: ${{ vars.VITE_MAP_EMBED_URL || '' }}
+          VITE_FACEBOOK_URL: ${{ vars.VITE_FACEBOOK_URL || '' }}
+          VITE_TELEGRAM_URL: ${{ vars.VITE_TELEGRAM_URL || '' }}
+          VITE_WHATSAPP_URL: ${{ vars.VITE_WHATSAPP_URL || '' }}
+        run: npm run build
+
+      # ------------------------------------------------------------------------
+      # 6. VERIFY BUILD OUTPUT & CPANEL FILES (.htaccess & .cpanel.yml)
+      # Fails clearly if dist/index.html or dist/.htaccess is missing.
+      # ------------------------------------------------------------------------
+      - name: Verify cPanel static output in dist/
+        run: |
+          if [ ! -f "dist/index.html" ]; then
+            echo "❌ ERROR: dist/index.html was not generated. Build failed!"
+            exit 1
+          fi
+          if [ ! -f "dist/.htaccess" ]; then
+            echo "❌ ERROR: dist/.htaccess is missing!"
+            exit 1
+          fi
+          if [ ! -f "dist/.cpanel.yml" ]; then
+            cp .cpanel.yml dist/.cpanel.yml
+          fi
+          echo "✅ Build verified successfully. Contents of dist/:"
+          ls -la dist/
+
+      # ========================================================================
+      # DEPLOY OPTION A: UPLOAD READY-TO-EXTRACT ZIP ARTIFACT (ENABLED BY DEFAULT)
+      # Download this artifact from GitHub Actions -> upload to cPanel File
+      # Manager (`public_html`) -> Extract.
+      # Set repository variable `ENABLE_ARTIFACT_UPLOAD` to `false` to disable.
+      # ========================================================================
+      - name: "[Option A] Create ready-to-upload cPanel ZIP package"
+        if: ${{ vars.ENABLE_ARTIFACT_UPLOAD != 'false' }}
+        run: |
+          cd dist
+          zip -r9 ../cpanel-public_html-build.zip . -x "*.DS_Store"
+          cd ..
+          ls -lh cpanel-public_html-build.zip
+
+      - name: "[Option A] Upload cPanel ZIP as GitHub Actions Artifact"
+        if: ${{ vars.ENABLE_ARTIFACT_UPLOAD != 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpanel-public_html-build
+          path: cpanel-public_html-build.zip
+          include-hidden-files: true
+          retention-days: 30
+
+      # ========================================================================
+      # DEPLOY OPTION B: PUSH BUILT FILES TO `deploy` BRANCH FOR cPANEL GIT PULL
+      # (ENABLED BY DEFAULT — set repo variable `ENABLE_DEPLOY_BRANCH` to `false` to disable)
+      # Pushes ONLY the contents of `dist/` (including `.htaccess` and `.cpanel.yml`)
+      # to the `deploy` branch. cPanel Git Version Control pulls `deploy` and
+      # copies the files into `/home/$USER/public_html/` via `.cpanel.yml`.
+      # ========================================================================
+      - name: "[Option B] Push built dist/ files to 'deploy' branch"
+        if: ${{ vars.ENABLE_DEPLOY_BRANCH != 'false' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd dist
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b deploy
+          git add -A
+          git commit -m "Deploy static build from commit ${GITHUB_SHA::7}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" deploy:deploy
+
+      # ========================================================================
+      # DEPLOY OPTION C: AUTOMATIC FTPS DEPLOY TO cPANEL (DISABLED BY DEFAULT)
+      # To enable:
+      # 1. Add GitHub Secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_DIR
+      # 2. Set GitHub Repository Variable: ENABLE_FTPS_DEPLOY = true
+      # ========================================================================
+      - name: "[Option C] Deploy dist/ to cPanel via FTPS"
+        if: ${{ vars.ENABLE_FTPS_DEPLOY == 'true' }}
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: ${{ secrets.FTP_PORT || 21 }}
+          local-dir: ./dist/
+          server-dir: ${{ secrets.FTP_DIR || '/public_html/' }}
+          dangerous-clean-slate: false

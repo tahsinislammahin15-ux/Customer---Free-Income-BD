@@ -1,0 +1,18 @@
+---
+# ==============================================================================
+# cPANEL GIT VERSION CONTROL DEPLOYMENT CONFIGURATION (.cpanel.yml)
+# ==============================================================================
+# Used with Option B (Deploy Branch: `deploy`).
+# When cPanel pulls the `deploy` branch in "cPanel -> Git™ Version Control",
+# it executes these tasks to copy the pre-built static files into `public_html`.
+#
+# NOTE: Replace `cpanel_username` below if your hosting environment does not
+# automatically populate `$USER`, or keep `/home/$USER/public_html/` which works
+# on standard cPanel Linux shared hosting.
+# ==============================================================================
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/$USER/public_html/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -Rf * $DEPLOYPATH
+    - /bin/cp -f .htaccess $DEPLOYPATH 2>/dev/null || true
