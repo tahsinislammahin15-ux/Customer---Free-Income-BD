@@ -41,7 +41,9 @@ import {
   Server,
   Eye,
 } from 'lucide-react';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { useApp } from '../context/AppContext';
+import { auth } from '../firebase';
 import { TASK_IMAGE, TOURNAMENT_IMAGE } from '../data/seedData';
 import {
   BlogPost,
@@ -117,6 +119,7 @@ export const AdminPanelPage: React.FC = () => {
     lockedPendingByUser,
     refreshWalletFromBackend,
     addToast,
+    theme,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -149,34 +152,53 @@ export const AdminPanelPage: React.FC = () => {
     setInspectUser(userObj);
     setInspectLoading(true);
     try {
-      const res = await fetch(`/api/wallet/user/${encodeURIComponent(userObj.id)}`);
+      const headers: Record<string, string> = {};
+      if (adminSession.sessionToken) {
+        headers.Authorization = `Bearer ${adminSession.sessionToken}`;
+        headers['X-Admin-Token'] = adminSession.sessionToken;
+      } else if (auth.currentUser) {
+        const idToken = await auth.currentUser.getIdToken();
+        headers.Authorization = `Bearer ${idToken}`;
+      }
+      const res = await fetch(`/api/wallet/user/${encodeURIComponent(userObj.id)}`, {
+        headers,
+      });
       if (res.ok) {
         const data = await res.json();
         if (data?.ok) {
           setInspectBalances(data.balances || null);
-          setInspectLedger(Array.isArray(data.ledger) ? data.ledger : []);
+          setInspectLedger(
+            Array.isArray(data.userLedger)
+              ? data.userLedger
+              : Array.isArray(data.ledger)
+              ? data.ledger
+              : []
+          );
         }
+      } else {
+        addToast('Ledger Fetch Failed', 'Unable to authorize user wallet lookup.', 'error');
       }
     } catch {
-      // Fallback
+      addToast('Network Error', 'Failed to inspect user ledger.', 'error');
     }
     setInspectLoading(false);
   };
 
   // Auth Portal State
   const [authMode, setAuthMode] = useState<'login' | 'bootstrap' | 'forgot'>('login');
-  const [loginId, setLoginId] = useState('tahsinislammahin15@gmail.com');
+  const [loginId, setLoginId] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [authSubmitting, setAuthSubmitting] = useState(false);
 
   // Bootstrap Form State
-  const [bootEmail, setBootEmail] = useState('tahsinislammahin15@gmail.com');
-  const [bootUsername, setBootUsername] = useState('admin_tahsin');
+  const [bootEmail, setBootEmail] = useState('');
+  const [bootUsername, setBootUsername] = useState('');
   const [bootPassword, setBootPassword] = useState('');
 
   // Forgot Password State
-  const [forgotEmail, setForgotEmail] = useState('tahsinislammahin15@gmail.com');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [selectedWinnerByTrn, setSelectedWinnerByTrn] = useState<Record<string, string>>({});
 
   // Change Password Form State (Mandatory First Login + Voluntary Rotation)
   const [currPass, setCurrPass] = useState('');
@@ -315,19 +337,20 @@ export const AdminPanelPage: React.FC = () => {
       <div className="max-w-lg mx-auto px-4 py-12 sm:py-16">
         <div className="p-6 sm:p-8 rounded-2xl zvy-card space-y-6 border border-[#E5E7EB] dark:border-[#1E293B]">
           <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-4">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-[#3B0A0A] text-white flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-5 h-5" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#3B0A0A] dark:text-[#FCA5A5]">
                   PRODUCTION ADMIN SECURITY GATE
                 </div>
-                <h1 className="text-xl font-extrabold text-[#111827] dark:text-[#F8FAFC]">
+                <h1 className="text-xl font-extrabold text-[#111827] dark:text-[#F8FAFC] truncate">
                   H41FFTOPUP · Admin Console
                 </h1>
               </div>
             </div>
+            <ThemeToggle variant="surface" compact />
           </div>
 
           {authError && (
@@ -397,8 +420,8 @@ export const AdminPanelPage: React.FC = () => {
                     autoComplete="username"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
-                    placeholder="tahsinislammahin15@gmail.com or admin_tahsin"
-                    className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                    placeholder="admin@example.com or admin_username"
+                    className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
                   />
                 </div>
                 <div>
@@ -413,7 +436,7 @@ export const AdminPanelPage: React.FC = () => {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Enter your admin password"
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
                   />
                 </div>
                 <button
@@ -440,7 +463,7 @@ export const AdminPanelPage: React.FC = () => {
                 className="w-full py-2.5 px-4 rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
               >
                 <ShieldCheck className="w-4 h-4 text-white" />
-                <span>Sign In with Google (tahsinislammahin15@gmail.com)</span>
+                <span>Sign In with Google (Authorized Principal Admin)</span>
               </button>
 
               <div className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] text-[11px] text-[#4B5563] dark:text-[#94A3B8] space-y-1">
@@ -562,18 +585,21 @@ export const AdminPanelPage: React.FC = () => {
     return (
       <div className="max-w-lg mx-auto px-4 py-14">
         <div className="p-6 sm:p-8 rounded-2xl card-premium space-y-6 border-2 border-[#F59E0B]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] flex items-center justify-center shrink-0">
-              <KeyRound className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[11px] font-mono font-bold uppercase text-[#F59E0B]">
-                MANDATORY SECURITY POLICY
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] flex items-center justify-center shrink-0">
+                <KeyRound className="w-5 h-5" />
               </div>
-              <h1 className="text-xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
-                Change Temporary Admin Password
-              </h1>
+              <div>
+                <div className="text-[11px] font-mono font-bold uppercase text-[#F59E0B]">
+                  MANDATORY SECURITY POLICY
+                </div>
+                <h1 className="text-xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
+                  Change Temporary Admin Password
+                </h1>
+              </div>
             </div>
+            <ThemeToggle variant="surface" compact />
           </div>
 
           <p className="text-xs text-[#475569] dark:text-[#94A3B8] leading-relaxed">
@@ -891,12 +917,13 @@ export const AdminPanelPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ThemeToggle variant="surface" />
           <button
             onClick={() => {
               setActiveTab('secrets');
               fetchAdminSecrets();
             }}
-            className="px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold flex items-center gap-1.5 hover:border-[#3B0A0A]"
+            className="px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold text-[#111827] dark:text-white flex items-center gap-1.5 hover:border-[#3B0A0A]"
           >
             <KeyRound className="w-3.5 h-3.5 text-[#3B0A0A] dark:text-[#FCA5A5]" />
             <span>Server Secrets & Password</span>
@@ -965,11 +992,45 @@ export const AdminPanelPage: React.FC = () => {
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={revenueChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
-                        <XAxis dataKey="day" stroke="#6B7280" fontSize={12} />
-                        <YAxis stroke="#6B7280" fontSize={12} />
-                        <Tooltip />
-                        <Bar dataKey="topup" name="Diamond Top Up (৳)" fill="#3B0A0A" radius={[6, 6, 0, 0]} />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={theme === 'dark' ? '#334155' : '#E5E7EB'}
+                          opacity={0.6}
+                        />
+                        <XAxis
+                          dataKey="day"
+                          stroke={theme === 'dark' ? '#94A3B8' : '#6B7280'}
+                          fontSize={12}
+                        />
+                        <YAxis
+                          stroke={theme === 'dark' ? '#94A3B8' : '#6B7280'}
+                          fontSize={12}
+                        />
+                        <Tooltip
+                          contentStyle={
+                            theme === 'dark'
+                              ? {
+                                  backgroundColor: '#111827',
+                                  borderColor: '#1F2937',
+                                  color: '#F8FAFC',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                }
+                              : {
+                                  backgroundColor: '#FFFFFF',
+                                  borderColor: '#E5E7EB',
+                                  color: '#111827',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                }
+                          }
+                        />
+                        <Bar
+                          dataKey="topup"
+                          name="Diamond Top Up (৳)"
+                          fill={theme === 'dark' ? '#FF5500' : '#3B0A0A'}
+                          radius={[6, 6, 0, 0]}
+                        />
                         <Bar dataKey="tournament" name="Tournament Fees (৳)" fill="#0D3B66" radius={[6, 6, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -983,10 +1044,39 @@ export const AdminPanelPage: React.FC = () => {
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={revenueChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" opacity={0.3} />
-                        <XAxis dataKey="day" stroke="#94A3B8" fontSize={12} />
-                        <YAxis stroke="#94A3B8" fontSize={12} />
-                        <Tooltip />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={theme === 'dark' ? '#334155' : '#E5E7EB'}
+                          opacity={0.6}
+                        />
+                        <XAxis
+                          dataKey="day"
+                          stroke={theme === 'dark' ? '#94A3B8' : '#6B7280'}
+                          fontSize={12}
+                        />
+                        <YAxis
+                          stroke={theme === 'dark' ? '#94A3B8' : '#6B7280'}
+                          fontSize={12}
+                        />
+                        <Tooltip
+                          contentStyle={
+                            theme === 'dark'
+                              ? {
+                                  backgroundColor: '#111827',
+                                  borderColor: '#1F2937',
+                                  color: '#F8FAFC',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                }
+                              : {
+                                  backgroundColor: '#FFFFFF',
+                                  borderColor: '#E5E7EB',
+                                  color: '#111827',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                }
+                          }
+                        />
                         <Area
                           type="monotone"
                           dataKey="tasks"
@@ -1634,12 +1724,41 @@ export const AdminPanelPage: React.FC = () => {
                             Rotate Room ID ({trn.roomId || 'None'})
                           </button>
 
-                          <button
-                            onClick={() => adminAnnounceTournamentWinner(trn.id, 'USR-1001')}
-                            className="px-3 py-1.5 rounded-xl bg-[#10B981] text-white text-xs font-semibold"
-                          >
-                            Declare Winner & Auto-Credit ৳{trn.prizePool}
-                          </button>
+                          {trn.registeredPlayers.length > 0 ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <select
+                                value={selectedWinnerByTrn[trn.id] || trn.registeredPlayers[0].userId}
+                                onChange={(e) =>
+                                  setSelectedWinnerByTrn((prev) => ({
+                                    ...prev,
+                                    [trn.id]: e.target.value,
+                                  }))
+                                }
+                                className="px-2.5 py-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-xs text-[#111827] dark:text-white"
+                              >
+                                {trn.registeredPlayers.map((p) => (
+                                  <option key={p.userId} value={p.userId}>
+                                    {p.ffIgn} ({p.ffUid})
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() =>
+                                  adminAnnounceTournamentWinner(
+                                    trn.id,
+                                    selectedWinnerByTrn[trn.id] || trn.registeredPlayers[0].userId
+                                  )
+                                }
+                                className="px-3 py-1.5 rounded-xl bg-[#10B981] text-white text-xs font-semibold"
+                              >
+                                Declare Winner & Auto-Credit ৳{trn.prizePool}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-[#6B7280] dark:text-[#94A3B8] italic">
+                              No registered players yet
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1917,7 +2036,6 @@ export const AdminPanelPage: React.FC = () => {
                     <option value="nagad">Nagad</option>
                     <option value="rocket">Rocket</option>
                     <option value="upay">Upay</option>
-                    <option value="card">Card</option>
                   </select>
                   <input
                     type="number"
@@ -2390,7 +2508,11 @@ export const AdminPanelPage: React.FC = () => {
                 <div className="text-xs font-bold">
                   Available Deposit & Payout Methods (Merchant Numbers, Personal Numbers & Instructions)
                 </div>
-                {payForm.gateways.map((gw, idx) => (
+                {payForm.gateways
+                  .filter((gw) => (gw.id as string) !== 'card')
+                  .map((gw) => {
+                    const idx = payForm.gateways.findIndex((item) => item.id === gw.id);
+                    return (
                   <div
                     key={gw.id}
                     className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] space-y-3 text-xs"
@@ -2457,7 +2579,8 @@ export const AdminPanelPage: React.FC = () => {
                       />
                     </div>
                   </div>
-                ))}
+                    );
+                  })}
               </div>
 
               <button

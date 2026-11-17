@@ -39,11 +39,11 @@ export const FreeIncomePage: React.FC = () => {
 
   const mySubmissions = currentUser
     ? taskSubmissions.filter((s) => s.userId === currentUser.id)
-    : taskSubmissions;
+    : [];
 
-  const referralUrl = `${window.location.origin}/?ref=${
-    currentUser?.referralCode || 'TAHSINBD'
-  }`;
+  const referralUrl = currentUser
+    ? `${window.location.origin}/register?ref=${currentUser.referralCode}`
+    : '';
 
   const handleProofSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,25 +121,40 @@ export const FreeIncomePage: React.FC = () => {
           Share your referral link with Free Fire squadmates. You earn ৳{paymentSettings.referralBonusBdt} BDT and your friend receives a ৳15 starter reward.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            readOnly
-            value={referralUrl}
-            className="flex-1 h-[40px] px-3 text-xs font-mono rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(referralUrl);
-              addToast('Referral Link Copied', 'Share this link with your friends!', 'success');
-            }}
-            className="h-[40px] px-4 rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
-          >
-            <Copy className="w-3.5 h-3.5" />
-            <span>Copy Link ({currentUser?.referralCount ?? 0} Invited)</span>
-          </button>
-        </div>
+        {currentUser ? (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              readOnly
+              value={referralUrl}
+              className="flex-1 h-[40px] px-3 text-xs font-mono rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(referralUrl);
+                addToast('Referral Link Copied', 'Share this link with your friends!', 'success');
+              }}
+              className="h-[40px] px-4 rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy Link ({currentUser.referralCount ?? 0} Invited)</span>
+            </button>
+          </div>
+        ) : (
+          <div className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <span className="text-[#4B5563] dark:text-[#94A3B8]">
+              Sign in or register to unlock your personal referral link and invite tracking.
+            </span>
+            <button
+              type="button"
+              onClick={() => navigate('login')}
+              className="h-[36px] px-4 rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-bold whitespace-nowrap"
+            >
+              Sign In / Register
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Category Filter Strip */}
@@ -241,7 +256,14 @@ export const FreeIncomePage: React.FC = () => {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setSelectedTask(task)}
+                    onClick={() => {
+                      if (!currentUser) {
+                        addToast('Sign In Required', 'Please sign in before submitting task proof.', 'warning');
+                        navigate('login');
+                        return;
+                      }
+                      setSelectedTask(task);
+                    }}
                     className="w-full h-[40px] rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <Send className="w-3.5 h-3.5" />
@@ -264,39 +286,51 @@ export const FreeIncomePage: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          {mySubmissions.map((sub) => (
-            <div
-              key={sub.id}
-              className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between gap-3 text-xs"
-            >
-              <div className="min-w-0 space-y-0.5">
-                <div className="font-bold text-[#111827] dark:text-white truncate">
-                  {sub.taskTitle}
-                </div>
-                <div className="text-[11px] text-[#6B7280] truncate">{sub.proofNote}</div>
-                <div className="text-[10px] font-mono text-[#9CA3AF]">
-                  {sub.id} · {sub.submittedAt}
-                </div>
-              </div>
-
-              <div className="text-right shrink-0 space-y-1">
-                <div className="font-mono font-extrabold text-[#059669]">
-                  +৳{sub.rewardBdt} BDT
-                </div>
-                <span
-                  className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                    sub.status === 'Approved'
-                      ? 'bg-[#00C853] text-white'
-                      : sub.status === 'Rejected'
-                      ? 'bg-[#FEE2E2] text-[#B91C1C]'
-                      : 'bg-[#FEF3C7] text-[#B45309]'
-                  }`}
-                >
-                  {sub.status}
-                </span>
-              </div>
+          {!currentUser ? (
+            <div className="py-6 text-center text-xs text-[#6B7280] dark:text-[#94A3B8]">
+              Sign in to view your task verification history.
             </div>
-          ))}
+          ) : mySubmissions.length === 0 ? (
+            <div className="py-6 text-center text-xs text-[#6B7280] dark:text-[#94A3B8]">
+              No task proofs submitted yet.
+            </div>
+          ) : (
+            mySubmissions.map((sub) => (
+              <div
+                key={sub.id}
+                className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between gap-3 text-xs"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <div className="font-bold text-[#111827] dark:text-white truncate">
+                    {sub.taskTitle}
+                  </div>
+                  <div className="text-[11px] text-[#6B7280] dark:text-[#94A3B8] truncate">
+                    {sub.proofNote}
+                  </div>
+                  <div className="text-[10px] font-mono text-[#9CA3AF]">
+                    {sub.id} · {sub.submittedAt}
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 space-y-1">
+                  <div className="font-mono font-extrabold text-[#059669]">
+                    +৳{sub.rewardBdt} BDT
+                  </div>
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                      sub.status === 'Approved'
+                        ? 'bg-[#00C853] text-white'
+                        : sub.status === 'Rejected'
+                        ? 'bg-[#FEE2E2] text-[#B91C1C]'
+                        : 'bg-[#FEF3C7] text-[#B45309]'
+                    }`}
+                  >
+                    {sub.status}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -324,7 +358,7 @@ export const FreeIncomePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
                 Screenshot or Proof URL
               </label>
               <input
@@ -333,12 +367,12 @@ export const FreeIncomePage: React.FC = () => {
                 value={proofUrl}
                 onChange={(e) => setProofUrl(e.target.value)}
                 placeholder="https://prnt.sc/... or profile link"
-                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
                 Verification Note (Username / Reference Code)
               </label>
               <textarea
@@ -347,7 +381,7 @@ export const FreeIncomePage: React.FC = () => {
                 value={proofNote}
                 onChange={(e) => setProofNote(e.target.value)}
                 placeholder="Enter your @username or reference code..."
-                className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+                className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ShoppingBag,
   Heart,
@@ -39,6 +39,14 @@ export const TopUpPage: React.FC = () => {
   const [selectedPkgId, setSelectedPkgId] = useState<string>(packages[2]?.id || 'PKG-115');
   const [playerUid, setPlayerUid] = useState<string>(currentUser?.ffUid || '');
   const [checkedIgn, setCheckedIgn] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentUser?.ffUid) {
+      setPlayerUid((prev) => prev || currentUser.ffUid);
+    } else if (!currentUser) {
+      setCheckedIgn(null);
+    }
+  }, [currentUser]);
   const [paymentMode, setPaymentMode] = useState<'wallet' | 'instant'>('instant');
   const [selectedGateway, setSelectedGateway] = useState<PaymentGatewayName>('bkash');
   const [trxId, setTrxId] = useState<string>('');
@@ -206,7 +214,9 @@ export const TopUpPage: React.FC = () => {
     filteredPackages[0] ||
     uniquePackages[0];
 
-  const activeGateways = paymentSettings.gateways.filter((g) => g.active);
+  const activeGateways = paymentSettings.gateways.filter(
+    (g) => g.active && (g.id as string) !== 'card'
+  );
   const currentGatewayConfig =
     activeGateways.find((g) => g.id === selectedGateway) || activeGateways[0];
 
@@ -265,10 +275,16 @@ export const TopUpPage: React.FC = () => {
       return;
     }
 
+    const targetUid = playerUid.trim() || currentUser?.ffUid || '';
+    if (targetUid.length < 6) {
+      addToast('Player ID প্রয়োজন', 'অনুগ্রহ করে সঠিক Free Fire Player ID লিখুন।', 'warning');
+      return;
+    }
+
     const ord = placeTopUpOrder({
       pkg: activeSelectedPkg,
-      playerUid: playerUid.trim() || currentUser?.ffUid || '2849103842',
-      playerIgn: checkedIgn || currentUser?.ffIgn || 'BD_PLAYER',
+      playerUid: targetUid,
+      playerIgn: checkedIgn || currentUser?.ffIgn || 'BD Player',
       paymentMethod: paymentMode === 'wallet' ? 'wallet' : selectedGateway,
       transactionId:
         paymentMode === 'instant'
@@ -399,17 +415,17 @@ export const TopUpPage: React.FC = () => {
           {/* Optional Search & Custom Diamond Calculator */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-              placeholder={
-                language === 'bn'
-                  ? 'প্যাকেজ খুঁজুন (যেমন: 115, 240, Weekly)...'
-                  : 'Filter packages (e.g. 115, 240, Weekly)...'
-              }
-              className="w-full h-9 pl-9 pr-3 rounded-xl bg-gray-50 dark:bg-[#0B0F17] border border-gray-200 dark:border-gray-800 text-xs"
-            />
+              <input
+                type="text"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                placeholder={
+                  language === 'bn'
+                    ? 'প্যাকেজ খুঁজুন (যেমন: 115, 240, Weekly)...'
+                    : 'Filter packages (e.g. 115, 240, Weekly)...'
+                }
+                className="w-full h-9 pl-9 pr-3 rounded-xl bg-gray-50 dark:bg-[#0B0F17] border border-gray-200 dark:border-gray-800 text-xs text-[#111827] dark:text-white placeholder:text-gray-400"
+              />
           </div>
 
           {showCustomCalc && (
@@ -704,7 +720,7 @@ export const TopUpPage: React.FC = () => {
                 value={trxId}
                 onChange={(e) => setTrxId(e.target.value)}
                 placeholder="Transaction ID (অথবা খালি রাখলে অটো গেটওয়ে)"
-                className="w-full h-10 px-3 rounded-lg bg-white dark:bg-[#161F30] border border-gray-200 dark:border-gray-700 text-xs font-mono"
+                className="w-full h-10 px-3 rounded-lg bg-white dark:bg-[#161F30] border border-gray-200 dark:border-gray-700 text-xs font-mono text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
           )}
@@ -760,10 +776,15 @@ export const TopUpPage: React.FC = () => {
               type="button"
               onClick={() => {
                 if (!activeSelectedPkg) return;
+                const cartUid = playerUid.trim() || currentUser?.ffUid || '';
+                if (cartUid.length < 6) {
+                  addToast('Player ID প্রয়োজন', 'কার্টে যোগ করার আগে সঠিক Free Fire Player ID লিখুন।', 'warning');
+                  return;
+                }
                 addToCart(
                   activeSelectedPkg,
-                  playerUid.trim() || currentUser?.ffUid || '2849103842',
-                  checkedIgn || currentUser?.ffIgn || 'BD_PLAYER'
+                  cartUid,
+                  checkedIgn || currentUser?.ffIgn || 'BD Player'
                 );
                 setIsCartOpen(true);
               }}
@@ -813,7 +834,7 @@ export const TopUpPage: React.FC = () => {
           value={trackOrderId}
           onChange={(e) => setTrackOrderId(e.target.value)}
           placeholder={`Enter Order ID (e.g. ${orders[0]?.id || 'ORD-90124'})`}
-          className="w-full h-10 px-3.5 rounded-xl bg-gray-50 dark:bg-[#0B0F17] border border-gray-200 dark:border-gray-800 text-xs font-mono"
+          className="w-full h-10 px-3.5 rounded-xl bg-gray-50 dark:bg-[#0B0F17] border border-gray-200 dark:border-gray-800 text-xs font-mono text-[#111827] dark:text-white placeholder:text-gray-400"
         />
         {trackedOrder && (
           <div className="p-3.5 rounded-xl bg-[#00C853]/10 border border-[#00C853]/30 text-xs space-y-1">

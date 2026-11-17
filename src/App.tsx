@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AppProvider } from './context/AppContext';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';
@@ -37,6 +37,31 @@ import {
 } from './pages/DedicatedSectionPages';
 import { AdminPanelPage } from './pages/AdminPanelPage';
 
+const AuthLoadingFallback: React.FC = () => (
+  <div className="max-w-md mx-auto py-20 px-4 text-center space-y-3">
+    <div className="w-9 h-9 rounded-full border-3 border-[#3B0A0A] dark:border-[#FF5500] border-t-transparent animate-spin mx-auto" />
+    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+      Verifying session...
+    </p>
+  </div>
+);
+
+const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const { authReady, currentUser, pendingGoogleRegistration } = useApp();
+  const location = useLocation();
+
+  if (!authReady) {
+    return <AuthLoadingFallback />;
+  }
+  if (pendingGoogleRegistration) {
+    return <Navigate to="/register" replace />;
+  }
+  if (!currentUser) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+  return children;
+};
+
 const AppRoutesShell: React.FC = () => {
   const location = useLocation();
 
@@ -45,7 +70,7 @@ const AppRoutesShell: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0B0F17] text-[#111827] dark:text-[#F9FAFB] transition-colors">
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0B0F17] text-[#111827] dark:text-[#F9FAFB] transition-colors duration-200">
       <Navbar />
       <PageSeoAndBreadcrumbs />
       <ToastContainer />
@@ -63,12 +88,54 @@ const AppRoutesShell: React.FC = () => {
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/faq" element={<FaqPage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/account" element={<MyAccountPage />} />
-          <Route path="/profile" element={<UserProfilePage />} />
-          <Route path="/wallet" element={<WalletPage />} />
-          <Route path="/deposit" element={<DepositPage />} />
-          <Route path="/withdraw" element={<WithdrawPage />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route
+            path="/account"
+            element={
+              <RequireAuth>
+                <MyAccountPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <UserProfilePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/wallet"
+            element={
+              <RequireAuth>
+                <WalletPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/deposit"
+            element={
+              <RequireAuth>
+                <DepositPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/withdraw"
+            element={
+              <RequireAuth>
+                <WithdrawPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/transactions"
+            element={
+              <RequireAuth>
+                <TransactionsPage />
+              </RequireAuth>
+            }
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />

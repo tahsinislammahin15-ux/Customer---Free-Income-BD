@@ -120,4 +120,21 @@ export const DIRTY_DOZEN_TEST_CASES: DirtyDozenTestCase[] = [
     payload: { id: 'INVALID$ID#WITH!SPECIAL*CHARS', category: 'topup', title: 'Test', priceOrRewardBdt: 100, active: true },
     expectedResult: 'PERMISSION_DENIED',
   },
+  {
+    id: 13,
+    name: 'Cross-User Profile Read Attempt',
+    collectionPath: 'users/victim-uid-123',
+    operation: 'get',
+    auth: { uid: 'attacker-uid-456', email: 'attacker@gmail.com', email_verified: true },
+    expectedResult: 'PERMISSION_DENIED',
+  },
+  {
+    id: 14,
+    name: 'Client Self-Credit Balance Tampering',
+    collectionPath: 'users/attacker-uid-456',
+    operation: 'update',
+    auth: { uid: 'attacker-uid-456', email: 'attacker@gmail.com', email_verified: true },
+    payload: { mainBalance: 999999 },
+    expectedResult: 'PERMISSION_DENIED',
+  },
 ];

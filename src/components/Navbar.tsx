@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Language } from '../types';
+import { ThemeToggle } from './ThemeToggle';
 
 export const Navbar: React.FC = () => {
   const {
@@ -81,14 +82,13 @@ export const Navbar: React.FC = () => {
   return (
     <>
       <header className="sticky top-0 z-40 w-full">
-
-        {/* Main Deep Maroon Storefront Navbar (Matches 00:26 - 03:50 in Reference Recording) */}
+        {/* Main Deep Maroon Storefront Navbar */}
         <div className="bg-[#280606] text-white border-b border-[#3D1414] shadow-md">
-          <div className="max-w-5xl mx-auto px-3 sm:px-5 h-14 sm:h-16 flex items-center justify-between gap-2">
+          <div className="max-w-5xl mx-auto px-2.5 sm:px-5 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-2">
             {/* Left: Flame Emblem + Metallic Orange-Red Brand Wordmark */}
             <Link
               to="/"
-              className="flex items-center gap-2 shrink-0 group"
+              className="flex items-center gap-1.5 sm:gap-2 shrink-0 group"
               aria-label="H41FFTOPUP Home"
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-b from-[#FF7A00] to-[#D91B00] p-[1.5px] shadow-sm">
@@ -96,7 +96,7 @@ export const Navbar: React.FC = () => {
                   <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-[#FF5500] fill-[#FF5500]" />
                 </div>
               </div>
-              <div className="font-display font-black text-base sm:text-xl tracking-tight leading-none flex items-center gap-1 whitespace-nowrap">
+              <div className="font-display font-black text-sm sm:text-xl tracking-tight leading-none flex items-center gap-1 whitespace-nowrap">
                 <span className="bg-gradient-to-b from-[#FFB800] via-[#FF5500] to-[#D91B00] bg-clip-text text-transparent drop-shadow-xs">
                   H41
                 </span>
@@ -109,7 +109,7 @@ export const Navbar: React.FC = () => {
             {/* Center: Desktop Quick Links */}
             <nav
               aria-label="Primary Navigation"
-              className="hidden lg:flex items-center gap-4 text-xs font-bold text-gray-200"
+              className="hidden lg:flex items-center gap-3.5 text-xs font-bold text-gray-200"
             >
               <NavLink
                 to="/"
@@ -183,9 +183,17 @@ export const Navbar: React.FC = () => {
               )}
             </nav>
 
-            {/* Right: Language Pill + Register + Login (Exact Match to 00:26 & 01:03 in Recording) */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Language Selector Pill (Opens Reference Modal) */}
+            {/* Right: Theme Switch + Language + Auth + Menu */}
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              {/* Desktop 3-way Theme Toggle & Mobile Compact Theme Cycle */}
+              <div className="hidden sm:flex">
+                <ThemeToggle variant="navbar" />
+              </div>
+              <div className="flex sm:hidden">
+                <ThemeToggle variant="navbar" compact />
+              </div>
+
+              {/* Language Selector */}
               <button
                 type="button"
                 onClick={() => {
@@ -193,7 +201,7 @@ export const Navbar: React.FC = () => {
                   setLangModalOpen(true);
                 }}
                 aria-label="Select Language"
-                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-full bg-[#3D1414] hover:bg-[#4E1A1A] border border-[#5C2222] text-white text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
+                className="h-8 sm:h-9 px-2 sm:px-2.5 rounded-full bg-[#3D1414] hover:bg-[#4E1A1A] border border-[#5C2222] text-white text-[11px] sm:text-xs font-bold flex items-center gap-1 transition-colors whitespace-nowrap shrink-0"
               >
                 <span className="w-4 h-4 rounded-full bg-[#3B82F6] text-white flex items-center justify-center">
                   <Globe className="w-3 h-3" />
@@ -201,13 +209,13 @@ export const Navbar: React.FC = () => {
                 <span>{language === 'bn' ? 'BN' : 'EN'}</span>
               </button>
 
-              {/* Cart Button (if items exist or on desktop) */}
+              {/* Cart Button */}
               {cartItemCount > 0 && (
                 <button
                   type="button"
                   onClick={() => setIsCartOpen(true)}
                   aria-label="Open Cart"
-                  className="relative h-8 sm:h-9 px-2.5 rounded-lg bg-[#3D1414] border border-[#5C2222] text-white flex items-center justify-center"
+                  className="relative h-8 sm:h-9 px-2 rounded-lg bg-[#3D1414] border border-[#5C2222] text-white flex items-center justify-center"
                 >
                   <ShoppingBag className="w-3.5 h-3.5" />
                   <span className="ml-1 text-[11px] font-mono font-bold text-[#FF7A00]">
@@ -216,12 +224,12 @@ export const Navbar: React.FC = () => {
                 </button>
               )}
 
-              {/* Auth Buttons: Register (Maroon) + Login (Solid White) OR Wallet + Profile */}
+              {/* Auth Buttons */}
               {currentUser ? (
                 <>
                   <Link
                     to="/deposit"
-                    className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-[#3D1414] border border-[#5C2222] text-white text-xs font-mono font-bold flex items-center gap-1 whitespace-nowrap shrink-0"
+                    className="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg bg-[#3D1414] border border-[#5C2222] text-white text-[11px] sm:text-xs font-mono font-bold flex items-center gap-1 whitespace-nowrap shrink-0"
                     title="Wallet Balance — Click to Add Money"
                   >
                     <Wallet className="w-3.5 h-3.5 text-[#00C853]" />
@@ -229,10 +237,10 @@ export const Navbar: React.FC = () => {
                   </Link>
                   <Link
                     to="/account"
-                    className="h-8 sm:h-9 px-3 rounded-lg bg-white text-[#1A0505] hover:bg-gray-100 text-xs font-bold flex items-center gap-1 whitespace-nowrap shrink-0 shadow-xs"
+                    className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-white text-[#1A0505] hover:bg-gray-100 text-[11px] sm:text-xs font-bold flex items-center gap-1 whitespace-nowrap shrink-0 shadow-xs"
                   >
                     <UserCheck className="w-3.5 h-3.5" />
-                    <span className="max-w-[72px] truncate">
+                    <span className="max-w-[64px] truncate">
                       {currentUser.name.split(' ')[0]}
                     </span>
                   </Link>
@@ -241,13 +249,13 @@ export const Navbar: React.FC = () => {
                 <>
                   <Link
                     to="/register"
-                    className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-lg bg-[#3D1414] hover:bg-[#4E1A1A] border border-[#5C2222] text-white text-xs font-bold flex items-center justify-center whitespace-nowrap shrink-0 transition-colors"
+                    className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-[#3D1414] hover:bg-[#4E1A1A] border border-[#5C2222] text-white text-[11px] sm:text-xs font-bold flex items-center justify-center whitespace-nowrap shrink-0 transition-colors"
                   >
                     {language === 'bn' ? 'রেজিস্টার' : 'Register'}
                   </Link>
                   <Link
                     to="/login"
-                    className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-lg bg-white hover:bg-gray-100 text-[#1A0505] text-xs font-extrabold flex items-center justify-center whitespace-nowrap shrink-0 shadow-xs transition-colors"
+                    className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg bg-white hover:bg-gray-100 text-[#1A0505] text-[11px] sm:text-xs font-extrabold flex items-center justify-center whitespace-nowrap shrink-0 shadow-xs transition-colors"
                   >
                     {language === 'bn' ? 'লগইন' : 'Login'}
                   </Link>
@@ -271,14 +279,22 @@ export const Navbar: React.FC = () => {
         {mobileMenuOpen && (
           <div className="bg-white dark:bg-[#111827] text-[#111827] dark:text-white border-b border-gray-200 dark:border-gray-800 shadow-2xl px-4 py-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="max-w-5xl mx-auto space-y-4">
+              {/* Theme Switch Bar inside Drawer (Mobile + Desktop accessibility) */}
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                  {language === 'bn' ? 'থিম মোড (Theme)' : 'Appearance Theme'}
+                </div>
+                <ThemeToggle variant="surface" />
+              </div>
+
               {currentUser && (
-                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-[#161F30] border border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className="font-bold text-xs sm:text-sm">
-                      {currentUser.name} ({currentUser.ffIgn})
+                    <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">
+                      {currentUser.name} {currentUser.ffIgn ? `(${currentUser.ffIgn})` : ''}
                     </div>
-                    <div className="text-[11px] font-mono text-gray-500">
-                      UID: {currentUser.ffUid} · Main: ৳{currentUser.mainBalance} · Income: ৳{currentUser.incomeBalance}
+                    <div className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                      {currentUser.ffUid ? `UID: ${currentUser.ffUid} · ` : ''}Main: ৳{currentUser.mainBalance} · Income: ৳{currentUser.incomeBalance}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -290,11 +306,12 @@ export const Navbar: React.FC = () => {
                     </Link>
                     <button
                       type="button"
-                      onClick={logout}
-                      className="p-1.5 rounded-lg bg-red-50 text-red-600"
+                      onClick={() => void logout()}
+                      className="px-2.5 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 text-xs font-bold inline-flex items-center gap-1"
                       title="Logout"
                     >
-                      <LogOut className="w-4 h-4" />
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Logout</span>
                     </button>
                   </div>
                 </div>
@@ -309,8 +326,8 @@ export const Navbar: React.FC = () => {
                     className={({ isActive }) =>
                       `px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-colors ${
                         isActive
-                          ? 'bg-[#FFF5F5] border-[#3B0A0A] text-[#3B0A0A]'
-                          : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:border-[#3B0A0A]'
+                          ? 'bg-[#FFF5F5] dark:bg-[#2A0B0B] border-[#3B0A0A] dark:border-[#FF5500] text-[#3B0A0A] dark:text-white'
+                          : 'bg-gray-50 dark:bg-[#161F30] border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:border-[#3B0A0A] dark:hover:border-[#FF5500]'
                       }`
                     }
                   >
@@ -320,9 +337,9 @@ export const Navbar: React.FC = () => {
                 ))}
                 <NavLink
                   to="/admin"
-                  className="px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 border bg-amber-50 border-amber-300 text-amber-900"
+                  className="px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 border bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200"
                 >
-                  <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
+                  <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <span className="truncate">Admin Panel</span>
                 </NavLink>
               </div>
@@ -331,23 +348,21 @@ export const Navbar: React.FC = () => {
         )}
       </header>
 
-      {/* =====================================================================
-          LANGUAGE SELECTION MODAL (EXACT MATCH TO 01:00 & 01:05 IN RECORDING)
-         ===================================================================== */}
+      {/* LANGUAGE SELECTION MODAL */}
       {langModalOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
           onClick={() => setLangModalOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-3xl bg-white text-[#111827] p-6 shadow-2xl space-y-5 text-center"
+            className="w-full max-w-sm rounded-3xl bg-white dark:bg-[#111827] text-[#111827] dark:text-white border border-gray-200 dark:border-gray-800 p-6 shadow-2xl space-y-5 text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-1">
-              <h2 className="font-display font-extrabold text-lg sm:text-xl text-[#111827]">
+              <h2 className="font-display font-extrabold text-lg sm:text-xl text-[#111827] dark:text-white">
                 {pendingLang === 'bn' ? 'আপনার ভাষা নির্বাচন করুন' : 'Choose your language'}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 {pendingLang === 'bn'
                   ? 'চালিয়ে যেতে আপনার পছন্দের ভাষা নির্বাচন করুন'
                   : 'Select your preferred language to continue'}
@@ -360,8 +375,8 @@ export const Navbar: React.FC = () => {
                 onClick={() => setPendingLang('en')}
                 className={`h-14 rounded-2xl font-display font-bold text-sm transition-all border ${
                   pendingLang === 'en'
-                    ? 'bg-[#F5EBEB] border-[#3B0A0A] text-[#3B0A0A] shadow-xs'
-                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                    ? 'bg-[#F5EBEB] dark:bg-[#2A0B0B] border-[#3B0A0A] dark:border-[#FF5500] text-[#3B0A0A] dark:text-white shadow-xs'
+                    : 'bg-white dark:bg-[#161F30] border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-300'
                 }`}
               >
                 English
@@ -371,8 +386,8 @@ export const Navbar: React.FC = () => {
                 onClick={() => setPendingLang('bn')}
                 className={`h-14 rounded-2xl font-display font-bold text-sm transition-all border ${
                   pendingLang === 'bn'
-                    ? 'bg-[#F5EBEB] border-[#3B0A0A] text-[#3B0A0A] shadow-xs'
-                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                    ? 'bg-[#F5EBEB] dark:bg-[#2A0B0B] border-[#3B0A0A] dark:border-[#FF5500] text-[#3B0A0A] dark:text-white shadow-xs'
+                    : 'bg-white dark:bg-[#161F30] border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-300'
                 }`}
               >
                 বাংলা
@@ -382,7 +397,7 @@ export const Navbar: React.FC = () => {
             <button
               type="button"
               onClick={handleConfirmLanguage}
-              className="w-full h-12 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] text-white font-display font-bold text-sm transition-colors shadow-md"
+              className="w-full h-12 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] dark:bg-[#FF5500] dark:hover:bg-[#E04800] text-white font-display font-bold text-sm transition-colors shadow-md"
             >
               {pendingLang === 'bn' ? 'চালিয়ে যান' : 'Continue'}
             </button>

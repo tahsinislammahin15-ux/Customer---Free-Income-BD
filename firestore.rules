@@ -8,7 +8,7 @@ service cloud.firestore {
 
     // Reusable Hardened Primitives
     function isValidId(id) {
-      return id is string && id.size() >= 2 && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() >= 2 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function incoming() {
@@ -19,20 +19,26 @@ service cloud.firestore {
       return resource.data;
     }
 
+    // Authenticated Firebase user (Google + Email/Password)
     function isSignedIn() {
-      return request.auth != null && request.auth.token.email_verified == true;
+      return request.auth != null;
     }
 
-    // Database-enforced Admin RBAC (Bootstrapped Owner Email + Verified /admins/{uid} collection)
+    // Database-enforced Admin RBAC (Verified Email + Bootstrapped Owner Email or /admins/{uid} collection)
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == 'tahsinislammahin15@gmail.com' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-      );
+      return isSignedIn() &&
+        request.auth.token.email_verified == true && (
+          request.auth.token.email == 'tahsinislammahin15@gmail.com' ||
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        );
     }
 
     function isSafeHttpUrl(url, maxLen) {
       return url is string && url.size() >= 8 && url.size() <= maxLen && url.matches('^https?://.+');
+    }
+
+    function isValidPaymentGateway(method) {
+      return method in ['bkash', 'nagad', 'rocket', 'upay'];
     }
 
     // Validation Blueprint: PublicSettings (/settings/public)
@@ -92,12 +98,379 @@ service cloud.firestore {
       data.announcementText is string && data.announcementText.size() >= 2 && data.announcementText.size() <= 400 &&
       (!('announcementTextBn' in data) || (data.announcementTextBn is string && data.announcementTextBn.size() >= 2 && data.announcementTextBn.size() <= 400)) &&
       data.heroHeadline is string && data.heroHeadline.size() >= 2 && data.heroHeadline.size() <= 200 &&
-      (!('heroHeadlineBn' in data) || (data.heroHeadlineBn is string && data.heroHeadlineBn.size() >= 2 && data.heroHeadlineBn.size() >= 2 && data.heroHeadlineBn.size() <= 200)) &&
+      (!('heroHeadlineBn' in data) || (data.heroHeadlineBn is string && data.heroHeadlineBn.size() >= 2 && data.heroHeadlineBn.size() <= 200)) &&
       data.heroSubheadline is string && data.heroSubheadline.size() >= 2 && data.heroSubheadline.size() <= 500 &&
       (!('heroSubheadlineBn' in data) || (data.heroSubheadlineBn is string && data.heroSubheadlineBn.size() >= 2 && data.heroSubheadlineBn.size() <= 500)) &&
       data.updatedAt == request.time &&
       data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
       data.updatedBy == request.auth.uid;
+    }
+
+    // Validation Blueprint: UserProfile (/users/{userId})
+    function isValidUserProfileShape(data, userId) {
+      return data.keys().hasAll([
+        'id',
+        'uid',
+        'name',
+        'email',
+        'phone',
+        'role',
+        'ffUid',
+        'ffIgn',
+        'verified',
+        'banned',
+        'profileCompleted',
+        'mainBalance',
+        'incomeBalance',
+        'bonusBalance',
+        'referralCode',
+        'referralCount',
+        'totalEarned',
+        'tournamentWins',
+        'joinedAt',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'uid',
+        'name',
+        'email',
+        'phone',
+        'photoURL',
+        'role',
+        'ffUid',
+        'ffIgn',
+        'verified',
+        'banned',
+        'profileCompleted',
+        'mainBalance',
+        'incomeBalance',
+        'bonusBalance',
+        'referralCode',
+        'referredBy',
+        'referralCount',
+        'totalEarned',
+        'tournamentWins',
+        'joinedAt',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.id == userId &&
+      data.uid == userId &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+      data.email is string && data.email.size() >= 5 && data.email.size() <= 160 &&
+      data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 30 &&
+      (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+      data.role in ['user', 'admin'] &&
+      data.ffUid is string && data.ffUid.size() <= 30 &&
+      data.ffIgn is string && data.ffIgn.size() <= 60 &&
+      data.verified is bool &&
+      data.banned is bool &&
+      data.profileCompleted is bool &&
+      data.mainBalance is number && data.mainBalance >= 0 && data.mainBalance <= 10000000 &&
+      data.incomeBalance is number && data.incomeBalance >= 0 && data.incomeBalance <= 10000000 &&
+      data.bonusBalance is number && data.bonusBalance >= 0 && data.bonusBalance <= 10000000 &&
+      data.referralCode is string && data.referralCode.size() >= 3 && data.referralCode.size() <= 32 &&
+      (!('referredBy' in data) || (data.referredBy is string && data.referredBy.size() <= 32)) &&
+      data.referralCount is number && data.referralCount >= 0 && data.referralCount <= 100000 &&
+      data.totalEarned is number && data.totalEarned >= 0 && data.totalEarned <= 10000000 &&
+      data.tournamentWins is number && data.tournamentWins >= 0 && data.tournamentWins <= 100000 &&
+      data.joinedAt is string && data.joinedAt.size() >= 4 && data.joinedAt.size() <= 40;
+    }
+
+    function isValidUserProfileCreate(data, userId) {
+      return isValidUserProfileShape(data, userId) &&
+        data.role == 'user' &&
+        data.banned == false &&
+        data.mainBalance == 0 &&
+        data.incomeBalance == 0 &&
+        data.bonusBalance == 0 &&
+        data.referralCount == 0 &&
+        data.totalEarned == 0 &&
+        data.tournamentWins == 0 &&
+        data.createdAt == request.time &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidUserProfileOwnerUpdate(data, oldData, userId) {
+      return isValidUserProfileShape(data, userId) &&
+        data.id == oldData.id &&
+        data.uid == oldData.uid &&
+        data.email == oldData.email &&
+        data.role == oldData.role &&
+        data.banned == oldData.banned &&
+        data.verified == oldData.verified &&
+        data.referralCode == oldData.referralCode &&
+        data.mainBalance == oldData.mainBalance &&
+        data.incomeBalance == oldData.incomeBalance &&
+        data.bonusBalance == oldData.bonusBalance &&
+        data.referralCount == oldData.referralCount &&
+        data.totalEarned == oldData.totalEarned &&
+        data.tournamentWins == oldData.tournamentWins &&
+        data.joinedAt == oldData.joinedAt &&
+        data.createdAt == oldData.createdAt &&
+        data.updatedAt == request.time &&
+        data.diff(oldData).affectedKeys().hasOnly([
+          'name',
+          'phone',
+          'ffUid',
+          'ffIgn',
+          'photoURL',
+          'profileCompleted',
+          'updatedAt'
+        ]);
+    }
+
+    // Validation Blueprint: TopUpOrder (/orders/{orderId})
+    function isValidOrder(data, orderId) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'userName',
+        'packageId',
+        'packageTitle',
+        'diamonds',
+        'amountBdt',
+        'playerUid',
+        'playerIgn',
+        'topUpType',
+        'paymentMethod',
+        'status',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'userId',
+        'userName',
+        'packageId',
+        'packageTitle',
+        'diamonds',
+        'amountBdt',
+        'playerUid',
+        'playerIgn',
+        'topUpType',
+        'voucherPin',
+        'paymentMethod',
+        'transactionId',
+        'status',
+        'createdAt'
+      ]) &&
+      data.id == orderId &&
+      data.userId is string && data.userId.size() >= 2 && data.userId.size() <= 128 &&
+      data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 100 &&
+      data.packageId is string && data.packageId.size() >= 2 && data.packageId.size() <= 64 &&
+      data.packageTitle is string && data.packageTitle.size() >= 2 && data.packageTitle.size() <= 160 &&
+      data.diamonds is number && data.diamonds >= 0 && data.diamonds <= 1000000 &&
+      data.amountBdt is number && data.amountBdt >= 0 && data.amountBdt <= 500000 &&
+      data.playerUid is string && data.playerUid.size() >= 1 && data.playerUid.size() <= 40 &&
+      data.playerIgn is string && data.playerIgn.size() <= 60 &&
+      data.topUpType in ['uid', 'unipin'] &&
+      (!('voucherPin' in data) || (data.voucherPin is string && data.voucherPin.size() <= 80)) &&
+      (data.paymentMethod == 'wallet' || isValidPaymentGateway(data.paymentMethod)) &&
+      (!('transactionId' in data) || (data.transactionId is string && data.transactionId.size() <= 80)) &&
+      data.status in ['Pending', 'Processing', 'Completed', 'Cancelled'] &&
+      data.createdAt is string && data.createdAt.size() >= 4 && data.createdAt.size() <= 40;
+    }
+
+    // Validation Blueprint: DepositRecord (/deposits/{depositId})
+    function isValidDeposit(data, depositId) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'userName',
+        'method',
+        'channel',
+        'senderNumber',
+        'transactionId',
+        'amountBdt',
+        'status',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'userId',
+        'userName',
+        'method',
+        'channel',
+        'senderNumber',
+        'transactionId',
+        'amountBdt',
+        'feeBdt',
+        'netCreditBdt',
+        'screenshotUrl',
+        'gatewayReference',
+        'adminReason',
+        'status',
+        'createdAt'
+      ]) &&
+      data.id == depositId &&
+      data.userId is string && data.userId.size() >= 2 && data.userId.size() <= 128 &&
+      data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 100 &&
+      isValidPaymentGateway(data.method) &&
+      data.channel in ['Manual', 'Instant Gateway'] &&
+      data.senderNumber is string && data.senderNumber.size() >= 4 && data.senderNumber.size() <= 40 &&
+      data.transactionId is string && data.transactionId.size() >= 3 && data.transactionId.size() <= 80 &&
+      data.amountBdt is number && data.amountBdt > 0 && data.amountBdt <= 500000 &&
+      data.status in ['Pending', 'Approved', 'Rejected', 'Completed', 'Failed'] &&
+      data.createdAt is string && data.createdAt.size() >= 4 && data.createdAt.size() <= 40;
+    }
+
+    // Validation Blueprint: WithdrawRecord (/withdrawals/{withdrawId})
+    function isValidWithdraw(data, withdrawId) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'userName',
+        'method',
+        'walletSource',
+        'receiverNumber',
+        'amountBdt',
+        'feeBdt',
+        'netAmountBdt',
+        'status',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'userId',
+        'userName',
+        'method',
+        'walletSource',
+        'receiverNumber',
+        'amountBdt',
+        'feeBdt',
+        'netAmountBdt',
+        'status',
+        'flaggedForReview',
+        'flagReason',
+        'adminNote',
+        'adminReason',
+        'createdAt'
+      ]) &&
+      data.id == withdrawId &&
+      data.userId is string && data.userId.size() >= 2 && data.userId.size() <= 128 &&
+      data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 100 &&
+      isValidPaymentGateway(data.method) &&
+      data.walletSource in ['incomeBalance', 'mainBalance'] &&
+      data.receiverNumber is string && data.receiverNumber.size() >= 4 && data.receiverNumber.size() <= 40 &&
+      data.amountBdt is number && data.amountBdt > 0 && data.amountBdt <= 500000 &&
+      data.feeBdt is number && data.feeBdt >= 0 && data.feeBdt <= 100000 &&
+      data.netAmountBdt is number && data.netAmountBdt >= 0 && data.netAmountBdt <= 500000 &&
+      data.status in ['Pending', 'Approved', 'Rejected', 'Completed', 'Failed'] &&
+      data.createdAt is string && data.createdAt.size() >= 4 && data.createdAt.size() <= 40;
+    }
+
+    // Validation Blueprint: WalletTransaction (/transactions/{trxId})
+    function isValidTransaction(data, trxId) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'type',
+        'amountBdt',
+        'direction',
+        'balanceType',
+        'referenceId',
+        'description',
+        'status',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'userId',
+        'type',
+        'amountBdt',
+        'direction',
+        'balanceType',
+        'method',
+        'referenceId',
+        'description',
+        'status',
+        'createdAt'
+      ]) &&
+      data.id == trxId &&
+      data.userId is string && data.userId.size() >= 2 && data.userId.size() <= 128 &&
+      data.type is string && data.type.size() >= 2 && data.type.size() <= 40 &&
+      data.amountBdt is number && data.amountBdt >= 0 && data.amountBdt <= 1000000 &&
+      data.direction in ['credit', 'debit'] &&
+      data.balanceType in ['Main', 'Income', 'Bonus'] &&
+      (!('method' in data) || (data.method is string && data.method.size() <= 60)) &&
+      data.referenceId is string && data.referenceId.size() >= 2 && data.referenceId.size() <= 128 &&
+      data.description is string && data.description.size() >= 1 && data.description.size() <= 300 &&
+      data.status in ['Pending', 'Approved', 'Rejected', 'Completed', 'Failed'] &&
+      data.createdAt is string && data.createdAt.size() >= 4 && data.createdAt.size() <= 40;
+    }
+
+    // Validation Blueprint: TaskSubmission (/task_submissions/{subId})
+    function isValidTaskSubmission(data, subId) {
+      return data.keys().hasAll([
+        'id',
+        'taskId',
+        'taskTitle',
+        'userId',
+        'userName',
+        'rewardBdt',
+        'proofUrl',
+        'proofNote',
+        'status',
+        'submittedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'taskId',
+        'taskTitle',
+        'userId',
+        'userName',
+        'rewardBdt',
+        'proofUrl',
+        'proofNote',
+        'status',
+        'adminReason',
+        'submittedAt'
+      ]) &&
+      data.id == subId &&
+      data.taskId is string && data.taskId.size() >= 2 && data.taskId.size() <= 64 &&
+      data.taskTitle is string && data.taskTitle.size() >= 2 && data.taskTitle.size() <= 200 &&
+      data.userId is string && data.userId.size() >= 2 && data.userId.size() <= 128 &&
+      data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 100 &&
+      data.rewardBdt is number && data.rewardBdt >= 0 && data.rewardBdt <= 50000 &&
+      data.proofUrl is string && data.proofUrl.size() >= 3 && data.proofUrl.size() <= 400 &&
+      data.proofNote is string && data.proofNote.size() <= 600 &&
+      data.status in ['Pending', 'Approved', 'Rejected'] &&
+      (!('adminReason' in data) || (data.adminReason is string && data.adminReason.size() <= 400)) &&
+      data.submittedAt is string && data.submittedAt.size() >= 4 && data.submittedAt.size() <= 40;
+    }
+
+    // Validation Blueprint: SupportTicket (/support_tickets/{ticketId})
+    function isValidSupportTicket(data, ticketId) {
+      return data.keys().hasAll([
+        'id',
+        'userId',
+        'userName',
+        'category',
+        'subject',
+        'message',
+        'status',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id',
+        'userId',
+        'userName',
+        'category',
+        'subject',
+        'message',
+        'status',
+        'createdAt'
+      ]) &&
+      data.id == ticketId &&
+      data.userId is string && data.userId.size() >= 2 && data.userId.size() <= 128 &&
+      data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 100 &&
+      data.category in ['Top Up Issue', 'Tournament Room', 'Task Verification', 'Deposit / Withdraw'] &&
+      data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 160 &&
+      data.message is string && data.message.size() >= 2 && data.message.size() <= 1200 &&
+      data.status in ['Open', 'Resolved'] &&
+      data.createdAt is string && data.createdAt.size() >= 4 && data.createdAt.size() <= 40;
     }
 
     // Validation Blueprint: AdminRecord (/admins/{adminId})
@@ -147,7 +520,87 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // 2. ADMIN RBAC RECORDS (/admins/{adminId})
+    // 2. USER PROFILES (/users/{userId})
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId && isValidUserProfileCreate(incoming(), userId);
+      allow update: if isSignedIn() && isValidId(userId) && (
+        (isAdmin() && isValidUserProfileShape(incoming(), userId)) ||
+        (request.auth.uid == userId && isValidUserProfileOwnerUpdate(incoming(), existing(), userId))
+      );
+      allow delete: if false;
+    }
+
+    // 3. TOP-UP ORDERS (/orders/{orderId})
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && isValidId(orderId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(orderId) && incoming().userId == request.auth.uid && isValidOrder(incoming(), orderId);
+      allow update: if isAdmin() && isValidId(orderId) && isValidOrder(incoming(), orderId);
+      allow delete: if false;
+    }
+
+    // 4. USER DEPOSITS (/deposits/{depositId})
+    match /deposits/{depositId} {
+      allow get: if isSignedIn() && isValidId(depositId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(depositId) && incoming().userId == request.auth.uid && isValidDeposit(incoming(), depositId);
+      allow update: if isSignedIn() && isValidId(depositId) && (
+        (isAdmin() && isValidDeposit(incoming(), depositId)) ||
+        (resource.data.userId == request.auth.uid &&
+          existing().status == 'Pending' &&
+          incoming().status == 'Rejected' &&
+          isValidDeposit(incoming(), depositId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'adminReason']))
+      );
+      allow delete: if false;
+    }
+
+    // 5. USER WITHDRAWALS (/withdrawals/{withdrawId})
+    match /withdrawals/{withdrawId} {
+      allow get: if isSignedIn() && isValidId(withdrawId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(withdrawId) && incoming().userId == request.auth.uid && incoming().status == 'Pending' && isValidWithdraw(incoming(), withdrawId);
+      allow update: if isSignedIn() && isValidId(withdrawId) && (
+        (isAdmin() && isValidWithdraw(incoming(), withdrawId)) ||
+        (resource.data.userId == request.auth.uid &&
+          existing().status == 'Pending' &&
+          incoming().status == 'Rejected' &&
+          isValidWithdraw(incoming(), withdrawId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'adminReason']))
+      );
+      allow delete: if false;
+    }
+
+    // 6. USER TRANSACTIONS (/transactions/{trxId})
+    match /transactions/{trxId} {
+      allow get: if isSignedIn() && isValidId(trxId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(trxId) && incoming().userId == request.auth.uid && isValidTransaction(incoming(), trxId);
+      allow update: if isAdmin() && isValidId(trxId) && isValidTransaction(incoming(), trxId);
+      allow delete: if false;
+    }
+
+    // 7. TASK SUBMISSIONS (/task_submissions/{subId})
+    match /task_submissions/{subId} {
+      allow get: if isSignedIn() && isValidId(subId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(subId) && incoming().userId == request.auth.uid && incoming().status == 'Pending' && isValidTaskSubmission(incoming(), subId);
+      allow update: if isAdmin() && isValidId(subId) && isValidTaskSubmission(incoming(), subId);
+      allow delete: if false;
+    }
+
+    // 8. SUPPORT TICKETS (/support_tickets/{ticketId})
+    match /support_tickets/{ticketId} {
+      allow get: if isSignedIn() && isValidId(ticketId) && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(ticketId) && incoming().userId == request.auth.uid && incoming().status == 'Open' && isValidSupportTicket(incoming(), ticketId);
+      allow update: if isAdmin() && isValidId(ticketId) && isValidSupportTicket(incoming(), ticketId);
+      allow delete: if false;
+    }
+
+    // 9. ADMIN RBAC RECORDS (/admins/{adminId})
     match /admins/{adminId} {
       allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
       allow list: if false;
@@ -159,7 +612,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // 3. PUBLIC CATALOG ITEMS (/catalog/{itemId})
+    // 10. PUBLIC CATALOG ITEMS (/catalog/{itemId})
     match /catalog/{itemId} {
       allow get: if isValidId(itemId);
       allow list: if resource.data.active == true || isAdmin();
@@ -170,7 +623,7 @@ service cloud.firestore {
       allow delete: if isAdmin() && isValidId(itemId);
     }
 
-    // 4. IMMUTABLE ADMIN AUDIT LOGS (/audit_logs/{logId})
+    // 11. IMMUTABLE ADMIN AUDIT LOGS (/audit_logs/{logId})
     match /audit_logs/{logId} {
       allow get: if isAdmin() && isValidId(logId);
       allow list: if isAdmin() && resource.data.adminUid is string;
@@ -178,26 +631,21 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // 5. USER WALLETS (/wallets/{userId})
-    // Users can ONLY read their own wallet; Admins can read any user's wallet.
-    // Client SDK writes are strictly forbidden (balance is computed & mutated on the backend only).
+    // 12. USER WALLETS (/wallets/{userId})
     match /wallets/{userId} {
       allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
       allow list: if isAdmin() && resource.data.userId is string;
       allow create, update, delete: if false;
     }
 
-    // 6. DOUBLE-ENTRY WALLET LEDGER (/wallet_ledger/{entryId})
-    // Users can ONLY read their own ledger entries; Admins can inspect any user's ledger.
-    // Client SDK writes are strictly forbidden (immutable backend-only double-entry ledger).
+    // 13. DOUBLE-ENTRY WALLET LEDGER (/wallet_ledger/{entryId})
     match /wallet_ledger/{entryId} {
       allow get: if isSignedIn() && isValidId(entryId) && (resource.data.userId == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create, update, delete: if false;
     }
 
-    // 7. SERVER-ONLY ENCRYPTED SECRET VAULT (/vault_secrets/{secretId})
-    // Clients can NEVER read or write secret keys (Payment Gateway or UniPin secrets).
+    // 14. SERVER-ONLY ENCRYPTED SECRET VAULT (/vault_secrets/{secretId})
     match /vault_secrets/{secretId} {
       allow read, write: if false;
     }

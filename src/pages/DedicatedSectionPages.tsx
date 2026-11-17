@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -34,11 +34,21 @@ export const SpecialOffersPage: React.FC = () => {
     placeTopUpOrder,
     wishlist,
     toggleWishlist,
+    addToast,
   } = useApp();
 
-  const [targetUid, setTargetUid] = useState(currentUser?.ffUid || '2849103842');
-  const [targetIgn, setTargetIgn] = useState(currentUser?.ffIgn || 'BD_TAHSIN_99');
+  const [targetUid, setTargetUid] = useState(currentUser?.ffUid || '');
+  const [targetIgn, setTargetIgn] = useState(currentUser?.ffIgn || '');
   const [guildSquadSize, setGuildSquadSize] = useState<number>(4);
+
+  useEffect(() => {
+    if (currentUser?.ffUid) {
+      setTargetUid((prev) => prev || currentUser.ffUid);
+    }
+    if (currentUser?.ffIgn) {
+      setTargetIgn((prev) => prev || currentUser.ffIgn);
+    }
+  }, [currentUser]);
 
   const membershipPackages = packages.filter((p) => p.category === 'membership');
   const specialBundles = packages.filter(
@@ -55,13 +65,26 @@ export const SpecialOffersPage: React.FC = () => {
   const squadNetBdt = squadWeeklyTotal - squadDiscountBdt;
 
   const handleInstantBundleOrder = (pkg: DiamondPackage) => {
-    if (!targetUid.trim()) return;
+    const cleanUid = targetUid.trim();
+    if (cleanUid.length < 6) {
+      addToast('Player ID Required', 'Please enter a valid Free Fire numeric UID first.', 'warning');
+      return;
+    }
     placeTopUpOrder({
       pkg,
-      playerUid: targetUid.trim(),
-      playerIgn: targetIgn.trim() || 'BD_PLAYER',
+      playerUid: cleanUid,
+      playerIgn: targetIgn.trim() || 'BD Player',
       paymentMethod: 'wallet',
     });
+  };
+
+  const handleAddBundleToCart = (pkg: DiamondPackage) => {
+    const cleanUid = targetUid.trim();
+    if (cleanUid.length < 6) {
+      addToast('Player ID Required', 'Please enter a valid Free Fire numeric UID first.', 'warning');
+      return;
+    }
+    addToCart(pkg, cleanUid, targetIgn.trim() || 'BD Player');
   };
 
   return (
@@ -83,23 +106,27 @@ export const SpecialOffersPage: React.FC = () => {
 
           <div className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium mb-1">Player ID (UID)</label>
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
+                Player ID (UID)
+              </label>
               <input
                 type="text"
                 value={targetUid}
                 onChange={(e) => setTargetUid(e.target.value.replace(/\D/g, ''))}
-                placeholder="2849103842"
-                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B]"
+                placeholder="Enter Player UID"
+                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Player IGN (Optional)</label>
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
+                Player IGN (Optional)
+              </label>
               <input
                 type="text"
                 value={targetIgn}
                 onChange={(e) => setTargetIgn(e.target.value)}
-                placeholder="BD_TAHSIN_99"
-                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B]"
+                placeholder="Player IGN"
+                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
           </div>
@@ -162,7 +189,7 @@ export const SpecialOffersPage: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                if (weeklyPass) addToCart(weeklyPass, targetUid, targetIgn);
+                if (weeklyPass) handleAddBundleToCart(weeklyPass);
               }}
               className="w-full h-[40px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-bold transition-colors"
             >
@@ -218,15 +245,15 @@ export const SpecialOffersPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => addToCart(pass, targetUid, targetIgn)}
-                    className="h-[36px] px-3 rounded-lg border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold"
+                    onClick={() => handleAddBundleToCart(pass)}
+                    className="h-[36px] px-3 rounded-lg border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold text-[#111827] dark:text-white"
                   >
                     + Cart
                   </button>
                   <button
                     type="button"
                     onClick={() => handleInstantBundleOrder(pass)}
-                    className="h-[36px] px-4 rounded-lg bg-[#0D3B66] text-white text-xs font-bold"
+                    className="h-[36px] px-4 rounded-lg bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold"
                   >
                     Buy Now
                   </button>
@@ -290,8 +317,8 @@ export const SpecialOffersPage: React.FC = () => {
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => addToCart(pkg, targetUid, targetIgn)}
-                      className="h-[34px] px-2.5 rounded-lg border border-[#D1D5DB] text-xs font-semibold flex items-center gap-1"
+                      onClick={() => handleAddBundleToCart(pkg)}
+                      className="h-[34px] px-2.5 rounded-lg border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold text-[#111827] dark:text-white flex items-center gap-1"
                     >
                       <ShoppingBag className="w-3 h-3" />
                       <span>Cart</span>
@@ -299,7 +326,7 @@ export const SpecialOffersPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleInstantBundleOrder(pkg)}
-                      className="h-[34px] px-3 rounded-lg bg-[#0D3B66] text-white text-xs font-bold"
+                      className="h-[34px] px-3 rounded-lg bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold"
                     >
                       Buy
                     </button>
@@ -364,7 +391,7 @@ export const BlogAndNewsPage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search guides..."
-              className="w-full h-[38px] pl-9 pr-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+              className="w-full h-[38px] pl-9 pr-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
             />
           </div>
         </div>
@@ -378,7 +405,7 @@ export const BlogAndNewsPage: React.FC = () => {
               className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${
                 selectedCategory === cat
                   ? 'bg-[#3B0A0A] text-white'
-                  : 'text-[#4B5563] bg-[#F3F4F6] dark:bg-[#0B1120]'
+                  : 'text-[#4B5563] dark:text-gray-300 bg-[#F3F4F6] dark:bg-[#0B1120]'
               }`}
             >
               {cat}
@@ -614,40 +641,46 @@ export const PlayerReviewsPage: React.FC = () => {
                 required
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                placeholder="Sabbir"
-                className="w-full h-[38px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB]"
+                placeholder="Your Name"
+                className="w-full h-[38px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Free Fire IGN</label>
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
+                Free Fire IGN
+              </label>
               <input
                 type="text"
                 required
                 value={ffIgn}
                 onChange={(e) => setFfIgn(e.target.value)}
-                placeholder="BD_SNIPER"
-                className="w-full h-[38px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB]"
+                placeholder="Player IGN"
+                className="w-full h-[38px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-medium mb-1">City</label>
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
+                City
+              </label>
               <input
                 type="text"
                 required
                 value={locationCity}
                 onChange={(e) => setLocationCity(e.target.value)}
-                className="w-full h-[38px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB]"
+                className="w-full h-[38px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Service</label>
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
+                Service
+              </label>
               <select
                 value={serviceUsed}
                 onChange={(e) => setServiceUsed(e.target.value)}
-                className="w-full h-[38px] px-2.5 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB]"
+                className="w-full h-[38px] px-2.5 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white"
               >
                 <option value="UID Diamond Top Up">UID Diamond Top Up</option>
                 <option value="UniPin Voucher Code">UniPin Voucher Code</option>
@@ -666,7 +699,7 @@ export const PlayerReviewsPage: React.FC = () => {
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${
                   rating === rVal
                     ? 'bg-[#3B0A0A] text-white border-[#3B0A0A]'
-                    : 'bg-white border-[#D1D5DB]'
+                    : 'bg-white dark:bg-[#0B1120] border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white'
                 }`}
               >
                 {rVal} ★
@@ -680,7 +713,7 @@ export const PlayerReviewsPage: React.FC = () => {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Share your Top-Up speed or tournament experience..."
-            className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB]"
+            className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
           />
 
           <button

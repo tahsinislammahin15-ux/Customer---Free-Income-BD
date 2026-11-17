@@ -199,7 +199,7 @@ export const CartDrawer: React.FC = () => {
                   value={trxId}
                   onChange={(e) => setTrxId(e.target.value)}
                   placeholder="e.g. BKS992018KL"
-                  className="w-full min-h-[42px] px-3 py-2 text-xs font-mono rounded-xl bg-white dark:bg-[#0D1526] border border-[#E2E8F0] dark:border-[#1E2D4A]"
+                  className="w-full min-h-[42px] px-3 py-2 text-xs font-mono rounded-xl bg-white dark:bg-[#0D1526] text-[#111827] dark:text-white placeholder:text-gray-400 border border-[#E2E8F0] dark:border-[#1E2D4A]"
                 />
               </div>
             )}

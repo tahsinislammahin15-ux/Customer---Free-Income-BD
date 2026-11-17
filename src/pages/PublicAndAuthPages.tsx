@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
   Trophy,
@@ -11,13 +12,15 @@ import {
   ChevronUp,
   Lock,
   Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  ArrowLeft,
 } from 'lucide-react';
 import { PUBLIC_ENV } from '../config/env';
 import { useApp } from '../context/AppContext';
-import { auth, googleProvider, signInWithPopup } from '../firebase';
 
 /* ============================================================================
-   GOOGLE 'G' SVG BADGE (MATCHING RECORDING 01:28 & 01:31)
+   GOOGLE 'G' SVG BADGE
    ============================================================================ */
 const GoogleBadgeIcon: React.FC = () => (
   <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0 shadow-xs">
@@ -43,145 +46,309 @@ const GoogleBadgeIcon: React.FC = () => (
 );
 
 /* ============================================================================
-   1. PLAYER LOGIN PAGE (/login — EXACT MATCH TO RECORDING 01:31)
+   1. PLAYER LOGIN PAGE (/login)
    ============================================================================ */
 export const LoginPage: React.FC = () => {
-  const { login, users, navigate, addToast } = useApp();
+  const {
+    authReady,
+    currentUser,
+    pendingGoogleRegistration,
+    login,
+    signInWithGoogle,
+    sendPasswordReset,
+    navigate,
+  } = useApp();
+  const location = useLocation();
+  const routerNavigate = useNavigate();
+
+  const fromPath = (location.state as { from?: string } | null)?.from || '/account';
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [authError, setAuthError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Forgot password flow
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetFeedback, setResetFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  if (!authReady) {
+    return (
+      <div className="max-w-[440px] mx-auto px-3.5 py-16 text-center space-y-3">
+        <div className="w-8 h-8 rounded-full border-3 border-[#3B0A0A] dark:border-[#FF5500] border-t-transparent animate-spin mx-auto" />
+        <p className="text-xs text-gray-500 dark:text-gray-400">Checking authentication status...</p>
+      </div>
+    );
+  }
+
+  if (pendingGoogleRegistration) {
+    return <Navigate to="/register" replace />;
+  }
+
+  if (currentUser) {
+    return <Navigate to={fromPath} replace />;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(identifier, password);
+    setAuthError('');
+    setSubmitting(true);
+    const res = await login(identifier, password);
+    setSubmitting(false);
+
+    if (res.needsRegistration) {
+      routerNavigate('/register', { replace: true });
+      return;
+    }
+    if (res.ok) {
+      routerNavigate(fromPath, { replace: true });
+      return;
+    }
+    setAuthError(res.error || 'Unable to sign in. Please verify your credentials.');
   };
 
   const handleGoogleSignIn = async () => {
+    setAuthError('');
     setGoogleBusy(true);
-    try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      const email = cred.user.email || '';
-      const matched = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-      if (matched) {
-        login(matched.email, 'player123');
-      } else if (users[0]) {
-        login(users[0].email, 'player123');
-      }
-    } catch {
-      // Seamless fallback in preview iframe if popup is blocked or closed
-      if (users[0]) {
-        login(users[0].email, 'player123');
-      } else {
-        addToast('Google Sign-In', 'Please enter your email or phone number to continue.', 'info');
-      }
-    } finally {
-      setGoogleBusy(false);
+    const res = await signInWithGoogle();
+    setGoogleBusy(false);
+
+    if (res.needsRegistration) {
+      routerNavigate('/register', { replace: true });
+      return;
+    }
+    if (res.ok) {
+      routerNavigate(fromPath, { replace: true });
+      return;
+    }
+    if (res.error) {
+      setAuthError(res.error);
+    }
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetFeedback(null);
+    setResetBusy(true);
+    const res = await sendPasswordReset(resetEmail);
+    setResetBusy(false);
+    if (res.ok) {
+      setResetFeedback({
+        ok: true,
+        text: 'Password reset link sent! Check your inbox and spam folder.',
+      });
+    } else {
+      setResetFeedback({
+        ok: false,
+        text: res.error || 'Could not send reset email.',
+      });
     }
   };
 
   return (
     <div className="max-w-[440px] mx-auto px-3.5 py-8 sm:py-12">
       <div className="zvy-card p-6 sm:p-7 space-y-5">
-        {/* Top-left heading + subtitle matching 01:31 */}
-        <div className="space-y-1 text-left">
-          <h1 className="text-[22px] font-bold text-[#111827] dark:text-[#F8FAFC] leading-tight">
-            Login
-          </h1>
-          <p className="text-[13px] text-[#6B7280] dark:text-[#94A3B8]">
-            Login or register an account to continue
-          </p>
-        </div>
+        {resetMode ? (
+          <>
+            <div className="space-y-1 text-left">
+              <button
+                type="button"
+                onClick={() => {
+                  setResetMode(false);
+                  setResetFeedback(null);
+                }}
+                className="text-xs font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] inline-flex items-center gap-1 hover:underline mb-1"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Login</span>
+              </button>
+              <h1 className="text-[22px] font-bold text-[#111827] dark:text-[#F8FAFC] leading-tight">
+                Reset Password
+              </h1>
+              <p className="text-[13px] text-[#6B7280] dark:text-[#94A3B8]">
+                Enter your registered account email to receive a password reset link.
+              </p>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1.5">
-              Email or Phone
-            </label>
-            <input
-              type="text"
-              required
-              maxLength={160}
-              autoComplete="username"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Enter Email or Phone Number"
-              className="w-full h-[44px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
-            />
-          </div>
+            {resetFeedback && (
+              <div
+                role="alert"
+                className={`p-3 rounded-xl text-xs flex items-start gap-2 border ${
+                  resetFeedback.ok
+                    ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                    : 'bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800 text-red-700 dark:text-red-200'
+                }`}
+              >
+                {resetFeedback.ok ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                )}
+                <span>{resetFeedback.text}</span>
+              </div>
+            )}
 
-          <div>
-            <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1.5">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              maxLength={128}
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="password"
-              className="w-full h-[44px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
-            />
-          </div>
+            <form onSubmit={handleResetSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1.5">
+                  Account Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  maxLength={160}
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="w-full h-[44px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                />
+              </div>
 
-          <button
-            type="submit"
-            className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold transition-colors shadow-xs"
-          >
-            Sign In
-          </button>
-        </form>
+              <button
+                type="submit"
+                disabled={resetBusy}
+                className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold transition-colors shadow-xs disabled:opacity-60"
+              >
+                {resetBusy ? 'Sending Link...' : 'Send Reset Email'}
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <div className="space-y-1 text-left">
+              <h1 className="text-[22px] font-bold text-[#111827] dark:text-[#F8FAFC] leading-tight">
+                Login
+              </h1>
+              <p className="text-[13px] text-[#6B7280] dark:text-[#94A3B8]">
+                Sign in with your account or Google to continue
+              </p>
+            </div>
 
-        {/* Centered OR divider matching 01:31 */}
-        <div className="text-center text-[12px] font-semibold text-[#6B7280] dark:text-[#94A3B8] py-0.5">
-          OR
-        </div>
+            {authError && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-200 flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </div>
+            )}
 
-        {/* Full-width #3B0A0A Sign in with Google button matching 01:31 */}
-        <button
-          type="button"
-          disabled={googleBusy}
-          onClick={handleGoogleSignIn}
-          className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold flex items-center justify-center gap-3 transition-colors shadow-xs disabled:opacity-60"
-        >
-          <GoogleBadgeIcon />
-          <span>{googleBusy ? 'Connecting...' : 'Sign in with Google'}</span>
-        </button>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1.5">
+                  Email or Phone
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={160}
+                  autoComplete="username"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="Enter Email or 017XXXXXXXX"
+                  className="w-full h-[44px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                />
+              </div>
 
-        {/* Bottom centered maroon underlined link matching 01:31 */}
-        <div className="text-center pt-1">
-          <button
-            type="button"
-            onClick={() => navigate('register')}
-            className="text-[13px] font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] underline underline-offset-2 hover:opacity-80"
-          >
-            New User? Register Now
-          </button>
-        </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0]">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(identifier.includes('@') ? identifier : '');
+                      setResetMode(true);
+                    }}
+                    className="text-[11px] font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <input
+                  type="password"
+                  required
+                  maxLength={128}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full h-[44px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                />
+              </div>
 
-        {/* Subtle Admin Portal link preserving client admin access */}
-        <div className="pt-3 border-t border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#94A3B8]">
-          <span>Admin Console</span>
-          <button
-            type="button"
-            onClick={() => navigate('admin')}
-            className="font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] hover:underline inline-flex items-center gap-1"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Admin Portal →</span>
-          </button>
-        </div>
+              <button
+                type="submit"
+                disabled={submitting || googleBusy}
+                className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold transition-colors shadow-xs disabled:opacity-60"
+              >
+                {submitting ? 'Signing In...' : 'Sign In'}
+              </button>
+            </form>
+
+            <div className="text-center text-[12px] font-semibold text-[#6B7280] dark:text-[#94A3B8] py-0.5">
+              OR
+            </div>
+
+            <button
+              type="button"
+              disabled={googleBusy || submitting}
+              onClick={handleGoogleSignIn}
+              className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold flex items-center justify-center gap-3 transition-colors shadow-xs disabled:opacity-60"
+            >
+              <GoogleBadgeIcon />
+              <span>{googleBusy ? 'Connecting Google...' : 'Continue with Google'}</span>
+            </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => navigate('register')}
+                className="text-[13px] font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] underline underline-offset-2 hover:opacity-80"
+              >
+                New User? Register Now
+              </button>
+            </div>
+
+            <div className="pt-3 border-t border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#94A3B8]">
+              <span>Admin Console</span>
+              <button
+                type="button"
+                onClick={() => navigate('admin')}
+                className="font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] hover:underline inline-flex items-center gap-1"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Admin Portal →</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 };
 
 /* ============================================================================
-   2. REGISTRATION PAGE (/register — EXACT MATCH TO RECORDING 01:28 & 01:38)
+   2. REGISTRATION PAGE (/register + FIRST-TIME GOOGLE PROFILE COMPLETION)
    ============================================================================ */
 export const RegisterPage: React.FC = () => {
-  const { register, login, users, navigate, addToast } = useApp();
+  const {
+    authReady,
+    currentUser,
+    pendingGoogleRegistration,
+    register,
+    signInWithGoogle,
+    completeGoogleRegistration,
+    cancelGoogleRegistration,
+    navigate,
+  } = useApp();
+  const routerNavigate = useNavigate();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -189,9 +356,11 @@ export const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [ffUid, setFfUid] = useState('');
   const [ffIgn, setFfIgn] = useState('');
-  const [referralCodeInput, setReferralCodeInput] = useState('TAHSINBD');
+  const [referralCodeInput, setReferralCodeInput] = useState('');
   const [showOptionalGameFields, setShowOptionalGameFields] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -202,170 +371,170 @@ export const RegisterPage: React.FC = () => {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (pendingGoogleRegistration) {
+      setName((prev) => prev || pendingGoogleRegistration.name || '');
+      setEmail(pendingGoogleRegistration.email || '');
+      setAuthError('');
+    }
+  }, [pendingGoogleRegistration]);
+
+  if (!authReady) {
+    return (
+      <div className="max-w-[460px] mx-auto px-3.5 py-16 text-center space-y-3">
+        <div className="w-8 h-8 rounded-full border-3 border-[#3B0A0A] dark:border-[#FF5500] border-t-transparent animate-spin mx-auto" />
+        <p className="text-xs text-gray-500 dark:text-gray-400">Checking authentication status...</p>
+      </div>
+    );
+  }
+
+  if (currentUser && !pendingGoogleRegistration) {
+    return <Navigate to="/account" replace />;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      addToast('Password Mismatch', 'Password and Confirm Password do not match.', 'error');
+    setAuthError('');
+
+    if (pendingGoogleRegistration) {
+      setSubmitting(true);
+      const res = await completeGoogleRegistration({
+        name: name.trim(),
+        phone: phone.trim(),
+        ffUid: ffUid.trim().replace(/\D/g, '') || undefined,
+        ffIgn: ffIgn.trim() || undefined,
+        referralCodeInput: referralCodeInput.trim() || undefined,
+      });
+      setSubmitting(false);
+
+      if (res.ok) {
+        routerNavigate('/account', { replace: true });
+      } else {
+        setAuthError(res.error || 'Could not complete your registration.');
+      }
       return;
     }
-    const resolvedUid = ffUid.trim().replace(/\D/g, '') || '2849103842';
-    const resolvedIgn = ffIgn.trim() || name.trim().split(' ')[0]?.toUpperCase() || 'BD_PLAYER';
 
-    register({
+    if (password !== confirmPassword) {
+      setAuthError('Password and Confirm Password do not match.');
+      return;
+    }
+
+    setSubmitting(true);
+    const res = await register({
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim(),
       password,
-      ffUid: resolvedUid,
-      ffIgn: resolvedIgn,
+      ffUid: ffUid.trim().replace(/\D/g, '') || undefined,
+      ffIgn: ffIgn.trim() || undefined,
       referralCodeInput: referralCodeInput.trim() || undefined,
     });
+    setSubmitting(false);
+
+    if (res.ok) {
+      routerNavigate('/account', { replace: true });
+    } else {
+      setAuthError(res.error || 'Registration failed. Please check your details.');
+    }
   };
 
   const handleGoogleSignIn = async () => {
+    setAuthError('');
     setGoogleBusy(true);
-    try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      const fbEmail = cred.user.email || '';
-      const matched = users.find((u) => u.email.toLowerCase() === fbEmail.toLowerCase());
-      if (matched) {
-        login(matched.email, 'player123');
-      } else if (users[0]) {
-        login(users[0].email, 'player123');
-      }
-    } catch {
-      if (users[0]) {
-        login(users[0].email, 'player123');
-      } else {
-        addToast('Google Sign-In', 'Please complete the Sign Up form above.', 'info');
-      }
-    } finally {
-      setGoogleBusy(false);
+    const res = await signInWithGoogle();
+    setGoogleBusy(false);
+
+    if (res.ok && !res.needsRegistration) {
+      routerNavigate('/account', { replace: true });
+      return;
     }
+    if (!res.ok && res.error) {
+      setAuthError(res.error);
+    }
+  };
+
+  const handleCancelGoogle = async () => {
+    setAuthError('');
+    await cancelGoogleRegistration();
+    routerNavigate('/login', { replace: true });
   };
 
   return (
     <div className="max-w-[460px] mx-auto px-3.5 py-8 sm:py-12">
       <div className="zvy-card p-6 sm:p-7 space-y-5">
-        {/* Top-left heading + subtitle matching 01:28 & 01:38 */}
-        <div className="space-y-1 text-left">
-          <h1 className="text-[22px] font-bold text-[#111827] dark:text-[#F8FAFC] leading-tight">
-            Sign Up
-          </h1>
-          <p className="text-[13px] text-[#6B7280] dark:text-[#94A3B8]">
-            Enter your information to create an account
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          {/* Input 1: Name */}
-          <div>
-            <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
-              Name
-            </label>
-            <input
-              type="text"
-              required
-              maxLength={80}
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your Name"
-              className="w-full h-[42px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
-            />
-          </div>
-
-          {/* Input 2: Email */}
-          <div>
-            <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              maxLength={160}
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Your Email Address"
-              className="w-full h-[42px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
-            />
-          </div>
-
-          {/* Input 3: Phone number */}
-          <div>
-            <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
-              Phone number
-            </label>
-            <input
-              type="tel"
-              required
-              maxLength={14}
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Your Phone Number"
-              className="w-full h-[42px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
-            />
-          </div>
-
-          {/* 2-Column Row: Password & Confirm Password (exact match to 01:28 & 01:38) */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                maxLength={128}
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
-                className="w-full h-[42px] px-3 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
-              />
+        {pendingGoogleRegistration ? (
+          <>
+            <div className="space-y-1 text-left">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Google Account Connected</span>
+              </div>
+              <h1 className="text-[22px] font-bold text-[#111827] dark:text-[#F8FAFC] leading-tight">
+                Complete Registration
+              </h1>
+              <p className="text-[13px] text-[#6B7280] dark:text-[#94A3B8]">
+                First-time setup: confirm your profile details to create your personal wallet & account.
+              </p>
             </div>
 
-            <div>
-              <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                maxLength={128}
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="confirmpassword"
-                className="w-full h-[42px] px-3 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
-              />
-            </div>
-          </div>
+            {authError && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-200 flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </div>
+            )}
 
-          {/* Collapsible Player UID & Referral Bonus toggle so client features stay 100% accessible */}
-          <div className="pt-0.5">
-            <button
-              type="button"
-              onClick={() => setShowOptionalGameFields((prev) => !prev)}
-              className="text-[11px] font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] flex items-center gap-1 hover:underline"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>
-                {showOptionalGameFields
-                  ? 'Hide Free Fire UID & Referral Code (৳20 Bonus)'
-                  : '+ Add Free Fire UID & Referral Code (Claim ৳20 Welcome Bonus)'}
-              </span>
-            </button>
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
+                  Google Email (Verified)
+                </label>
+                <input
+                  type="email"
+                  readOnly
+                  value={pendingGoogleRegistration.email}
+                  className="w-full h-[42px] px-3.5 text-[13px] rounded-xl bg-gray-100 dark:bg-[#161F30] border border-[#D1D5DB] dark:border-[#1E293B] text-[#4B5563] dark:text-[#CBD5E1] cursor-not-allowed"
+                />
+              </div>
 
-            {showOptionalGameFields && (
-              <div className="mt-2.5 p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={80}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your full name"
+                  className="w-full h-[42px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
+                  Phone Number (Bangladesh)
+                </label>
+                <input
+                  type="tel"
+                  required
+                  maxLength={14}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="017XXXXXXXX"
+                  className="w-full h-[42px] px-3.5 text-[13px] font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div>
                   <label className="block text-[11px] font-medium text-[#4B5563] dark:text-[#94A3B8] mb-1">
-                    Free Fire UID
+                    Free Fire UID (Optional)
                   </label>
                   <input
                     type="text"
@@ -373,129 +542,294 @@ export const RegisterPage: React.FC = () => {
                     maxLength={12}
                     value={ffUid}
                     onChange={(e) => setFfUid(e.target.value.replace(/\D/g, ''))}
-                    placeholder="2849103842"
-                    className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B]"
+                    placeholder="Player UID"
+                    className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-[#4B5563] dark:text-[#94A3B8] mb-1">
-                    In-Game Name
+                    In-Game Name (Optional)
                   </label>
                   <input
                     type="text"
                     maxLength={40}
                     value={ffIgn}
                     onChange={(e) => setFfIgn(e.target.value)}
-                    placeholder="BD_STRIKER"
-                    className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B]"
+                    placeholder="Your IGN"
+                    className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-[#4B5563] dark:text-[#94A3B8] mb-1">
-                    Referral Code
+                    Referral Code (Optional)
                   </label>
                   <input
                     type="text"
                     maxLength={20}
                     value={referralCodeInput}
                     onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
-                    placeholder="TAHSINBD"
-                    className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B]"
+                    placeholder="Referral code"
+                    className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
                   />
                 </div>
               </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold transition-colors shadow-xs disabled:opacity-60"
+              >
+                {submitting ? 'Creating Account...' : 'Complete Registration & Sign In'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCancelGoogle}
+                className="w-full h-[40px] rounded-xl border border-[#D1D5DB] dark:border-[#334155] text-xs font-semibold text-[#4B5563] dark:text-[#CBD5E1] hover:bg-gray-50 dark:hover:bg-[#161F30] transition-colors"
+              >
+                Cancel / Use Different Account
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <div className="space-y-1 text-left">
+              <h1 className="text-[22px] font-bold text-[#111827] dark:text-[#F8FAFC] leading-tight">
+                Sign Up
+              </h1>
+              <p className="text-[13px] text-[#6B7280] dark:text-[#94A3B8]">
+                Enter your information to create an account
+              </p>
+            </div>
+
+            {authError && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-200 flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </div>
             )}
-          </div>
 
-          <button
-            type="submit"
-            className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold transition-colors shadow-xs"
-          >
-            Sign Up
-          </button>
-        </form>
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={80}
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your Full Name"
+                  className="w-full h-[42px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                />
+              </div>
 
-        {/* Centered OR divider matching 01:28 & 01:38 */}
-        <div className="text-center text-[12px] font-semibold text-[#6B7280] dark:text-[#94A3B8] py-0.5">
-          OR
-        </div>
+              <div>
+                <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  maxLength={160}
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Your Email Address"
+                  className="w-full h-[42px] px-3.5 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                />
+              </div>
 
-        {/* Full-width #3B0A0A Sign in with Google button matching 01:28 & 01:38 */}
-        <button
-          type="button"
-          disabled={googleBusy}
-          onClick={handleGoogleSignIn}
-          className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold flex items-center justify-center gap-3 transition-colors shadow-xs disabled:opacity-60"
-        >
-          <GoogleBadgeIcon />
-          <span>{googleBusy ? 'Connecting...' : 'Sign in with Google'}</span>
-        </button>
+              <div>
+                <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
+                  Phone number
+                </label>
+                <input
+                  type="tel"
+                  required
+                  maxLength={14}
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="017XXXXXXXX"
+                  className="w-full h-[42px] px-3.5 text-[13px] font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                />
+              </div>
 
-        {/* Bottom centered maroon underlined link matching 01:28 & 01:38 */}
-        <div className="text-center pt-1">
-          <button
-            type="button"
-            onClick={() => navigate('login')}
-            className="text-[13px] font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] underline underline-offset-2 hover:opacity-80"
-          >
-            Already have account? Login Now
-          </button>
-        </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min 6 chars"
+                    className="w-full h-[42px] px-3 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-[#111827] dark:text-[#E2E8F0] mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat password"
+                    className="w-full h-[42px] px-3 text-[13px] rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-[#F8FAFC] placeholder-[#9CA3AF] focus:outline-none focus:border-[#3B0A0A]"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowOptionalGameFields((prev) => !prev)}
+                  className="text-[11px] font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] flex items-center gap-1 hover:underline"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>
+                    {showOptionalGameFields
+                      ? 'Hide Free Fire UID & Referral Code (৳20 Bonus)'
+                      : '+ Add Free Fire UID & Referral Code (Claim ৳20 Welcome Bonus)'}
+                  </span>
+                </button>
+
+                {showOptionalGameFields && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-[#4B5563] dark:text-[#94A3B8] mb-1">
+                        Free Fire UID
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={12}
+                        value={ffUid}
+                        onChange={(e) => setFfUid(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Player UID"
+                        className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-[#4B5563] dark:text-[#94A3B8] mb-1">
+                        In-Game Name
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={40}
+                        value={ffIgn}
+                        onChange={(e) => setFfIgn(e.target.value)}
+                        placeholder="Your IGN"
+                        className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-[#4B5563] dark:text-[#94A3B8] mb-1">
+                        Referral Code
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={20}
+                        value={referralCodeInput}
+                        onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                        placeholder="Optional code"
+                        className="w-full h-[36px] px-2.5 text-[12px] font-mono rounded-lg bg-white dark:bg-[#111827] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting || googleBusy}
+                className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold transition-colors shadow-xs disabled:opacity-60"
+              >
+                {submitting ? 'Creating Account...' : 'Sign Up'}
+              </button>
+            </form>
+
+            <div className="text-center text-[12px] font-semibold text-[#6B7280] dark:text-[#94A3B8] py-0.5">
+              OR
+            </div>
+
+            <button
+              type="button"
+              disabled={googleBusy || submitting}
+              onClick={handleGoogleSignIn}
+              className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-[14px] font-semibold flex items-center justify-center gap-3 transition-colors shadow-xs disabled:opacity-60"
+            >
+              <GoogleBadgeIcon />
+              <span>{googleBusy ? 'Connecting Google...' : 'Continue with Google'}</span>
+            </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => navigate('login')}
+                className="text-[13px] font-semibold text-[#3B0A0A] dark:text-[#FCA5A5] underline underline-offset-2 hover:opacity-80"
+              >
+                Already have account? Login Now
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 };
 
 /* ============================================================================
-   3. LEADERBOARD PAGE (/leaderboard — MATCHES RECORDING 00:38–00:44 & 03:40–03:45)
+   3. LEADERBOARD PAGE (/leaderboard — LIVE DATA ONLY, ZERO FAKE DEMO ACCOUNTS)
    ============================================================================ */
 export const LeaderboardPage: React.FC = () => {
-  const { users, orders } = useApp();
+  const { users, orders, navigate } = useApp();
   const [periodTab, setPeriodTab] = useState<'WEEKLY' | 'MONTHLY' | 'LIFETIME'>('MONTHLY');
   const [categoryTab, setCategoryTab] = useState<'spend' | 'tournaments' | 'earners' | 'referrers'>(
     'spend'
   );
   const [visibleCount, setVisibleCount] = useState(20);
 
-  // Build ranked leaderboard rows combining real users + top-up spenders
   const spendLeaderboard = React.useMemo(() => {
-    const multiplier = periodTab === 'WEEKLY' ? 0.35 : periodTab === 'MONTHLY' ? 1 : 2.8;
-    const baseEntries = [
-      { id: 'LB-1', name: 'M R S A K I B', uid: '2849103842', spend: Math.round(69839 * multiplier), orders: Math.max(12, Math.round(115 * multiplier)), wins: 19, referrals: 34, earned: 4850 },
-      { id: 'LB-2', name: 'A H M E D', uid: '1938475610', spend: Math.round(62210 * multiplier), orders: Math.max(10, Math.round(138 * multiplier)), wins: 15, referrals: 28, earned: 3920 },
-      { id: 'LB-3', name: 'T A N V I R', uid: '3948571029', spend: Math.round(52130 * multiplier), orders: Math.max(9, Math.round(97 * multiplier)), wins: 14, referrals: 22, earned: 3410 },
-      { id: 'LB-4', name: 'Sabbir Hossain', uid: '4859201928', spend: Math.round(28429 * multiplier), orders: Math.max(8, Math.round(91 * multiplier)), wins: 11, referrals: 19, earned: 2890 },
-      { id: 'LB-5', name: 'Riyad Mahmud', uid: '5948302918', spend: Math.round(28390 * multiplier), orders: Math.max(7, Math.round(84 * multiplier)), wins: 9, referrals: 17, earned: 2450 },
-      { id: 'LB-6', name: 'Naimur Rahman', uid: '6049382716', spend: Math.round(27196 * multiplier), orders: Math.max(6, Math.round(79 * multiplier)), wins: 8, referrals: 15, earned: 2100 },
-      { id: 'LB-7', name: 'Fahim Shahriar', uid: '7182930495', spend: Math.round(24850 * multiplier), orders: Math.max(5, Math.round(72 * multiplier)), wins: 7, referrals: 14, earned: 1840 },
-      { id: 'LB-8', name: 'Mehedi Hasan', uid: '8293049581', spend: Math.round(22190 * multiplier), orders: Math.max(5, Math.round(66 * multiplier)), wins: 6, referrals: 12, earned: 1620 },
-      { id: 'LB-9', name: 'Tawsif Khan', uid: '9304958172', spend: Math.round(19840 * multiplier), orders: Math.max(4, Math.round(58 * multiplier)), wins: 5, referrals: 10, earned: 1490 },
-      { id: 'LB-10', name: 'Ashraful Islam', uid: '1029384756', spend: Math.round(18420 * multiplier), orders: Math.max(4, Math.round(51 * multiplier)), wins: 4, referrals: 9, earned: 1280 },
-    ];
-
-    const appUserEntries = users.map((u, i) => {
+    const appUserEntries = users.map((u) => {
       const userOrders = orders.filter((o) => o.userId === u.id && o.status === 'Completed');
       const realSpend = userOrders.reduce((acc, o) => acc + o.amountBdt, 0);
       return {
         id: u.id,
         name: u.name,
-        uid: u.ffUid,
-        spend: Math.max(realSpend, Math.round((16500 - i * 1400) * multiplier)),
-        orders: Math.max(userOrders.length, Math.round((45 - i * 4) * multiplier)),
+        uid: u.ffUid || '—',
+        spend: realSpend,
+        orders: userOrders.length,
         wins: u.tournamentWins,
         referrals: u.referralCount,
         earned: u.totalEarned,
       };
     });
 
-    const combined = [...baseEntries, ...appUserEntries];
-    return combined.sort((a, b) => {
+    return appUserEntries.sort((a, b) => {
       if (categoryTab === 'tournaments') return b.wins - a.wins;
       if (categoryTab === 'earners') return b.earned - a.earned;
       if (categoryTab === 'referrers') return b.referrals - a.referrals;
       return b.spend - a.spend;
     });
-  }, [users, orders, periodTab, categoryTab]);
+  }, [users, orders, categoryTab, periodTab]);
 
   const top3 = spendLeaderboard.slice(0, 3);
   const restRows = spendLeaderboard.slice(3, visibleCount);
@@ -510,7 +844,6 @@ export const LeaderboardPage: React.FC = () => {
   return (
     <div className="max-w-[960px] mx-auto px-3 sm:px-5 py-6 space-y-5">
       <div className="zvy-card p-4 sm:p-6 space-y-5">
-        {/* Header with Trophy Icon & Subtitle matching 00:38 */}
         <div className="text-center space-y-1">
           <div className="inline-flex items-center justify-center gap-2">
             <Trophy className="w-5 h-5 text-[#F59E0B]" />
@@ -519,11 +852,10 @@ export const LeaderboardPage: React.FC = () => {
             </h1>
           </div>
           <p className="text-[12px] text-[#6B7280] dark:text-[#94A3B8]">
-            Top players on H41FFTOPUP ranked by completed orders, esports Booyahs & rewards
+            Verified H41FFTOPUP players ranked by completed orders, esports Booyahs & rewards
           </p>
         </div>
 
-        {/* Period Switcher Tabs: WEEKLY | MONTHLY | LIFETIME (matching 00:38 & 03:40) */}
         <div className="flex justify-center">
           <div className="inline-flex items-center bg-[#F3F4F6] dark:bg-[#1E293B] p-1 rounded-xl border border-[#E5E7EB] dark:border-[#334155]">
             {(['WEEKLY', 'MONTHLY', 'LIFETIME'] as const).map((p) => (
@@ -534,7 +866,7 @@ export const LeaderboardPage: React.FC = () => {
                 className={`px-4 py-1.5 rounded-lg text-[11px] font-extrabold tracking-wide transition-all ${
                   periodTab === p
                     ? 'bg-[#3B0A0A] text-white shadow-xs'
-                    : 'text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827]'
+                    : 'text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-white'
                 }`}
               >
                 {p}
@@ -543,7 +875,6 @@ export const LeaderboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Client Multi-Pillar Filter Pills (Top Spend / Esports Wins / Task Earners / Referrers) */}
         <div className="flex items-center justify-center gap-1.5 flex-wrap">
           {[
             { id: 'spend', label: 'Top Spend (BDT)' },
@@ -557,8 +888,8 @@ export const LeaderboardPage: React.FC = () => {
               onClick={() => setCategoryTab(cat.id as typeof categoryTab)}
               className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
                 categoryTab === cat.id
-                  ? 'bg-[#FFF5F5] dark:bg-[#3B0A0A]/40 border-[#3B0A0A] text-[#3B0A0A] dark:text-[#FCA5A5]'
-                  : 'bg-white dark:bg-[#0B1120] border-[#E5E7EB] dark:border-[#1E293B] text-[#6B7280]'
+                  ? 'bg-[#FFF5F5] dark:bg-[#3B0A0A]/40 border-[#3B0A0A] dark:border-[#FF5500] text-[#3B0A0A] dark:text-[#FCA5A5]'
+                  : 'bg-white dark:bg-[#0B1120] border-[#E5E7EB] dark:border-[#1E293B] text-[#6B7280] dark:text-[#94A3B8]'
               }`}
             >
               {cat.label}
@@ -566,110 +897,126 @@ export const LeaderboardPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Top-3 Podium Stage (Rank #2 Left, Rank #1 Center Elevated with Crown, Rank #3 Right) */}
-        {top3.length >= 3 && (
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 items-end pt-5 pb-2">
-            {/* Rank #2 */}
-            <div className="rounded-2xl border border-[#CBD5E1] bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] dark:from-[#1E293B] dark:to-[#0F172A] p-3 text-center space-y-1.5 shadow-xs">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full bg-[#64748B] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center ring-2 ring-[#94A3B8]">
-                #2
-              </div>
-              <div className="text-[11px] sm:text-[13px] font-extrabold text-[#111827] dark:text-white truncate">
-                {top3[1].name}
-              </div>
-              <div className="text-[12px] sm:text-[14px] font-extrabold text-[#059669]">
-                {formatMetric(top3[1])}
-              </div>
-              <div className="text-[10px] font-semibold text-[#64748B]">
-                {top3[1].orders} Orders
-              </div>
+        {spendLeaderboard.length === 0 ? (
+          <div className="py-10 px-4 rounded-2xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] text-center space-y-3">
+            <Trophy className="w-8 h-8 text-[#F59E0B] mx-auto" />
+            <div className="text-sm font-bold text-[#111827] dark:text-white">
+              Leaderboard Rankings Populate Automatically
             </div>
-
-            {/* Rank #1 Elevated */}
-            <div className="rounded-2xl border-2 border-[#F59E0B] bg-gradient-to-b from-[#FFFBEB] to-[#FEF3C7] dark:from-[#3B2306] dark:to-[#1F1203] p-3.5 sm:p-4 text-center space-y-1.5 shadow-md -translate-y-2">
-              <div className="flex justify-center -mt-6 mb-0.5">
-                <span className="w-7 h-7 rounded-full bg-[#F59E0B] text-white flex items-center justify-center shadow-xs animate-bounce">
-                  <Crown className="w-4 h-4" />
-                </span>
-              </div>
-              <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-full bg-[#D97706] text-white font-extrabold text-sm sm:text-base flex items-center justify-center ring-2 ring-[#FBBF24]">
-                #1
-              </div>
-              <div className="text-[12px] sm:text-[14px] font-extrabold text-[#111827] dark:text-white truncate">
-                {top3[0].name}
-              </div>
-              <div className="text-[13px] sm:text-[16px] font-extrabold text-[#B45309] dark:text-[#FBBF24]">
-                {formatMetric(top3[0])}
-              </div>
-              <div className="text-[10px] font-bold text-[#92400E] dark:text-[#FDE68A]">
-                {top3[0].orders} Orders
-              </div>
-            </div>
-
-            {/* Rank #3 */}
-            <div className="rounded-2xl border border-[#FDBA74] bg-gradient-to-b from-[#FFF7ED] to-[#FFEDD5] dark:from-[#2C1606] dark:to-[#170B02] p-3 text-center space-y-1.5 shadow-xs">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full bg-[#EA580C] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center ring-2 ring-[#FB923C]">
-                #3
-              </div>
-              <div className="text-[11px] sm:text-[13px] font-extrabold text-[#111827] dark:text-white truncate">
-                {top3[2].name}
-              </div>
-              <div className="text-[12px] sm:text-[14px] font-extrabold text-[#EA580C]">
-                {formatMetric(top3[2])}
-              </div>
-              <div className="text-[10px] font-semibold text-[#9A3412] dark:text-[#FDBA74]">
-                {top3[2].orders} Orders
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Ranked List Rows (#4+) matching 00:41 & 03:43 */}
-        <div className="space-y-2">
-          {restRows.map((row, index) => {
-            const rankNum = index + 4;
-            return (
-              <div
-                key={row.id}
-                className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B]"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-7 h-7 rounded-lg bg-[#3B0A0A] text-white text-[11px] font-extrabold flex items-center justify-center shrink-0">
-                    #{rankNum}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-bold text-[#111827] dark:text-[#F8FAFC] truncate">
-                      {row.name}
-                    </div>
-                    <div className="text-[11px] text-[#6B7280] font-mono">
-                      UID: {row.uid} · {row.orders} Orders
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <div className="text-[13px] font-extrabold text-[#059669]">
-                    {formatMetric(row)}
-                  </div>
-                  <div className="text-[10px] text-[#6B7280]">
-                    {row.wins} Wins · {row.referrals} Refs
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {visibleCount < spendLeaderboard.length && (
-          <div className="text-center pt-2">
+            <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] max-w-md mx-auto">
+              Sign in and place Diamond Top-Up orders or win Custom Room matches to appear on the live verified leaderboard.
+            </p>
             <button
               type="button"
-              onClick={() => setVisibleCount((prev) => prev + 10)}
-              className="px-5 py-2 rounded-xl bg-[#3B0A0A] text-white text-xs font-bold hover:bg-[#4C0E0E] transition-colors"
+              onClick={() => navigate('topup')}
+              className="px-4 py-2 rounded-xl bg-[#3B0A0A] text-white text-xs font-bold"
             >
-              Load More Players
+              Browse Top-Up Packages
             </button>
           </div>
+        ) : (
+          <>
+            {top3.length >= 3 && (
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 items-end pt-5 pb-2">
+                <div className="rounded-2xl border border-[#CBD5E1] dark:border-[#334155] bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] dark:from-[#1E293B] dark:to-[#0F172A] p-3 text-center space-y-1.5 shadow-xs">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full bg-[#64748B] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center ring-2 ring-[#94A3B8]">
+                    #2
+                  </div>
+                  <div className="text-[11px] sm:text-[13px] font-extrabold text-[#111827] dark:text-white truncate">
+                    {top3[1].name}
+                  </div>
+                  <div className="text-[12px] sm:text-[14px] font-extrabold text-[#059669]">
+                    {formatMetric(top3[1])}
+                  </div>
+                  <div className="text-[10px] font-semibold text-[#64748B] dark:text-[#94A3B8]">
+                    {top3[1].orders} Orders
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border-2 border-[#F59E0B] bg-gradient-to-b from-[#FFFBEB] to-[#FEF3C7] dark:from-[#3B2306] dark:to-[#1F1203] p-3.5 sm:p-4 text-center space-y-1.5 shadow-md -translate-y-2">
+                  <div className="flex justify-center -mt-6 mb-0.5">
+                    <span className="w-7 h-7 rounded-full bg-[#F59E0B] text-white flex items-center justify-center shadow-xs animate-bounce">
+                      <Crown className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-full bg-[#D97706] text-white font-extrabold text-sm sm:text-base flex items-center justify-center ring-2 ring-[#FBBF24]">
+                    #1
+                  </div>
+                  <div className="text-[12px] sm:text-[14px] font-extrabold text-[#111827] dark:text-white truncate">
+                    {top3[0].name}
+                  </div>
+                  <div className="text-[13px] sm:text-[16px] font-extrabold text-[#B45309] dark:text-[#FBBF24]">
+                    {formatMetric(top3[0])}
+                  </div>
+                  <div className="text-[10px] font-bold text-[#92400E] dark:text-[#FDE68A]">
+                    {top3[0].orders} Orders
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#FDBA74] dark:border-[#9A3412] bg-gradient-to-b from-[#FFF7ED] to-[#FFEDD5] dark:from-[#2C1606] dark:to-[#170B02] p-3 text-center space-y-1.5 shadow-xs">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-full bg-[#EA580C] text-white font-extrabold text-xs sm:text-sm flex items-center justify-center ring-2 ring-[#FB923C]">
+                    #3
+                  </div>
+                  <div className="text-[11px] sm:text-[13px] font-extrabold text-[#111827] dark:text-white truncate">
+                    {top3[2].name}
+                  </div>
+                  <div className="text-[12px] sm:text-[14px] font-extrabold text-[#EA580C]">
+                    {formatMetric(top3[2])}
+                  </div>
+                  <div className="text-[10px] font-semibold text-[#9A3412] dark:text-[#FDBA74]">
+                    {top3[2].orders} Orders
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {(top3.length < 3 ? spendLeaderboard : restRows).map((row, index) => {
+                const rankNum = top3.length < 3 ? index + 1 : index + 4;
+                return (
+                  <div
+                    key={row.id}
+                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B]"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-lg bg-[#3B0A0A] text-white text-[11px] font-extrabold flex items-center justify-center shrink-0">
+                        #{rankNum}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-bold text-[#111827] dark:text-[#F8FAFC] truncate">
+                          {row.name}
+                        </div>
+                        <div className="text-[11px] text-[#6B7280] dark:text-[#94A3B8] font-mono">
+                          UID: {row.uid} · {row.orders} Orders
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <div className="text-[13px] font-extrabold text-[#059669]">
+                        {formatMetric(row)}
+                      </div>
+                      <div className="text-[10px] text-[#6B7280] dark:text-[#94A3B8]">
+                        {row.wins} Wins · {row.referrals} Refs
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {visibleCount < spendLeaderboard.length && (
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + 10)}
+                  className="px-5 py-2 rounded-xl bg-[#3B0A0A] text-white text-xs font-bold hover:bg-[#4C0E0E] transition-colors"
+                >
+                  Load More Players
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

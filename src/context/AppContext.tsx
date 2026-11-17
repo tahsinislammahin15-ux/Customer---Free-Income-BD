@@ -1,39 +1,44 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PUBLIC_ENV } from '../config/env';
 import { getPathForPage, resolvePageFromPath } from '../config/routes';
 import {
-  initialAuditLogs,
   initialBlogPosts,
   initialContactMessages,
-  initialDeposits,
   initialFaqs,
-  initialOrders,
   initialPackages,
   initialPaymentSettings,
   initialReviews,
   initialSiteSettings,
-  initialSupportTickets,
   initialTasks,
-  initialTaskSubmissions,
   initialTournaments,
-  initialTransactions,
-  initialUsers,
-  initialWithdrawals,
 } from '../data/seedData';
 import {
   auth,
+  authPersistenceReady,
+  collection,
+  createUserWithEmailAndPassword,
   db,
   doc,
+  getDoc,
+  getDocs,
   googleProvider,
   handleFirestoreError,
+  mapFirebaseAuthError,
+  onAuthStateChanged,
   onSnapshot,
   OperationType,
+  query,
   sendPasswordResetEmail,
   serverTimestamp,
   setDoc,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  updateDoc,
+  updateFirebaseProfile,
+  updatePassword,
+  where,
 } from '../firebase';
 import { translations } from '../i18n/translations';
 import {
@@ -72,7 +77,6 @@ import {
   safeJsonParse,
   sanitizeSafeUrl,
   sanitizeText,
-  stripSensitiveUserFields,
 } from '../utils/security';
 
 export interface SafeProfileUpdate {
@@ -80,35 +84,62 @@ export interface SafeProfileUpdate {
   phone?: string;
   ffUid?: string;
   ffIgn?: string;
+  photoURL?: string;
+}
+
+export interface PendingGoogleRegistration {
+  uid: string;
+  email: string;
+  name: string;
+  photoURL?: string;
+}
+
+export interface AuthActionResult {
+  ok: boolean;
+  error?: string;
+  needsRegistration?: boolean;
 }
 
 interface AppContextType {
   currentPage: PageView;
-  navigate: (page: PageView) => void;
+  navigate: (page: PageView, options?: { replace?: boolean }) => void;
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
-  theme: ThemeMode;
+  theme: 'light' | 'dark';
+  themePreference: ThemeMode;
   toggleTheme: () => void;
   setTheme: (mode: ThemeMode) => void;
   globalSearch: string;
   setGlobalSearch: (q: string) => void;
 
   // Player Auth & Users
+  authReady: boolean;
   currentUser: User | null;
+  pendingGoogleRegistration: PendingGoogleRegistration | null;
   users: User[];
-  login: (identifier: string, password?: string) => void;
+  login: (identifier: string, password?: string) => Promise<AuthActionResult>;
+  signInWithGoogle: () => Promise<AuthActionResult>;
+  completeGoogleRegistration: (payload: {
+    name: string;
+    phone: string;
+    ffUid?: string;
+    ffIgn?: string;
+    referralCodeInput?: string;
+  }) => Promise<AuthActionResult>;
+  cancelGoogleRegistration: () => Promise<void>;
   register: (payload: {
     name: string;
     email: string;
     phone: string;
     password: string;
-    ffUid: string;
-    ffIgn: string;
+    ffUid?: string;
+    ffIgn?: string;
     referralCodeInput?: string;
-  }) => boolean;
-  logout: () => void;
-  updateProfile: (updates: SafeProfileUpdate) => boolean;
+  }) => Promise<AuthActionResult>;
+  sendPasswordReset: (email: string) => Promise<AuthActionResult>;
+  logout: () => Promise<void>;
+  updateProfile: (updates: SafeProfileUpdate) => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
 
   // Production Admin Auth & Encrypted Secrets Vault
@@ -206,7 +237,9 @@ interface AppContextType {
   lockedPendingByUser: Record<string, number>;
   transferBalanceToMain: (from: 'incomeBalance' | 'bonusBalance', amountBdt: number) => boolean;
   submitContactMessage: (msg: Omit<ContactMessage, 'id' | 'status' | 'createdAt'>) => void;
-  submitSupportTicket: (ticket: Omit<SupportTicket, 'id' | 'userId' | 'userName' | 'status' | 'createdAt'>) => void;
+  submitSupportTicket: (
+    ticket: Omit<SupportTicket, 'id' | 'userId' | 'userName' | 'status' | 'createdAt'>
+  ) => void;
   submitUserReview: (review: Omit<UserReview, 'id' | 'date'>) => void;
 
   // Admin Actions
@@ -228,9 +261,17 @@ interface AppContextType {
   adminAnnounceTournamentWinner: (trnId: string, winnerUserId: string) => void;
   adminSaveTask: (task: IncomeTask, isNew: boolean) => void;
   adminDeleteTask: (taskId: string) => void;
-  adminVerifyTaskSubmission: (subId: string, decision: 'Approved' | 'Rejected', reason?: string) => void;
+  adminVerifyTaskSubmission: (
+    subId: string,
+    decision: 'Approved' | 'Rejected',
+    reason?: string
+  ) => void;
   adminVerifyDeposit: (depId: string, decision: 'Approved' | 'Rejected', reason?: string) => void;
-  adminVerifyWithdraw: (wthId: string, decision: 'Approved' | 'Completed' | 'Rejected', adminNote?: string) => void;
+  adminVerifyWithdraw: (
+    wthId: string,
+    decision: 'Approved' | 'Completed' | 'Rejected',
+    adminNote?: string
+  ) => void;
   adminUpdatePaymentSettings: (settings: PaymentSettings) => void;
   adminSaveBlogPost: (post: BlogPost, isNew: boolean) => void;
   adminDeleteBlogPost: (postId: string) => void;
@@ -240,6 +281,29 @@ interface AppContextType {
 
 const STORAGE_KEY = 'h41fftopup_app_state_v2';
 const ADMIN_SESSION_STORAGE_KEY = 'h41fftopup_admin_session_v2';
+const THEME_STORAGE_KEY = 'h41fftopup_theme';
+
+const LEGACY_USER_STORAGE_KEYS = [
+  `${STORAGE_KEY}_currentUserId`,
+  `${STORAGE_KEY}_users`,
+  `${STORAGE_KEY}_orders`,
+  `${STORAGE_KEY}_deposits`,
+  `${STORAGE_KEY}_withdrawals`,
+  `${STORAGE_KEY}_transactions`,
+  `${STORAGE_KEY}_taskSubmissions`,
+  `${STORAGE_KEY}_supportTickets`,
+  `${STORAGE_KEY}_auditLogs`,
+];
+
+function purgeLegacyUserStorage() {
+  try {
+    for (const key of LEGACY_USER_STORAGE_KEYS) {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore storage restriction
+  }
+}
 
 function normalizeBrandName(name?: string): string {
   if (!name || /free\s*income\s*bd|fibd/i.test(name)) {
@@ -292,10 +356,69 @@ function saveState<T>(key: string, value: T) {
   }
 }
 
+function getInitialThemePreference(): ThemeMode {
+  try {
+    const stored =
+      localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem('theme') || 'system';
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      return stored;
+    }
+  } catch {
+    // ignore
+  }
+  return 'system';
+}
+
+function getSystemDarkMatches(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function buildReferralCode(name: string, uid: string): string {
+  const prefix =
+    name
+      .replace(/[^a-zA-Z]/g, '')
+      .toUpperCase()
+      .slice(0, 4) || 'H41';
+  const suffix = uid.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(-4) || 'USER';
+  return `${prefix}${suffix}`;
+}
+
+function mapDocToUser(id: string, data: Record<string, unknown>): User {
+  return {
+    id,
+    uid: typeof data.uid === 'string' ? data.uid : id,
+    name: typeof data.name === 'string' ? data.name : 'Player',
+    email: typeof data.email === 'string' ? data.email : '',
+    phone: typeof data.phone === 'string' ? data.phone : '',
+    photoURL: typeof data.photoURL === 'string' ? data.photoURL : undefined,
+    role: data.role === 'admin' ? 'admin' : 'user',
+    ffUid: typeof data.ffUid === 'string' ? data.ffUid : '',
+    ffIgn: typeof data.ffIgn === 'string' ? data.ffIgn : 'BD_PLAYER',
+    verified: Boolean(data.verified),
+    banned: Boolean(data.banned),
+    profileCompleted: data.profileCompleted !== false,
+    mainBalance: typeof data.mainBalance === 'number' ? data.mainBalance : 0,
+    incomeBalance: typeof data.incomeBalance === 'number' ? data.incomeBalance : 0,
+    bonusBalance: typeof data.bonusBalance === 'number' ? data.bonusBalance : 0,
+    referralCode:
+      typeof data.referralCode === 'string'
+        ? data.referralCode
+        : buildReferralCode(String(data.name || 'H41'), id),
+    referredBy: typeof data.referredBy === 'string' && data.referredBy ? data.referredBy : undefined,
+    referralCount: typeof data.referralCount === 'number' ? data.referralCount : 0,
+    totalEarned: typeof data.totalEarned === 'number' ? data.totalEarned : 0,
+    tournamentWins: typeof data.tournamentWins === 'number' ? data.tournamentWins : 0,
+    joinedAt:
+      typeof data.joinedAt === 'string' ? data.joinedAt : new Date().toISOString().slice(0, 10),
+  };
+}
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const routerNavigate = useNavigate();
   const currentPage: PageView = resolvePageFromPath(location.pathname);
+
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => {
     const loaded = loadState('siteSettings', initialSiteSettings);
     const cleanedUrl = sanitizeSafeUrl(loaded.siteUrl);
@@ -315,28 +438,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       whatsappUrl: sanitizeSafeUrl(loaded.whatsappUrl) || initialSiteSettings.whatsappUrl,
     };
   });
+
   const [language, setLanguageState] = useState<Language>(() =>
     loadState('language', siteSettings.defaultLanguage)
   );
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    try {
-      const direct = localStorage.getItem('theme');
-      if (direct === 'light' || direct === 'dark') {
-        return direct;
-      }
-    } catch {
-      // ignore storage access errors
-    }
-    return loadState('theme', siteSettings.defaultTheme);
-  });
+  const [themePreference, setThemePreferenceState] = useState<ThemeMode>(getInitialThemePreference);
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(getSystemDarkMatches);
+  const theme: 'light' | 'dark' =
+    themePreference === 'system' ? (systemPrefersDark ? 'dark' : 'light') : themePreference;
+
   const [globalSearch, setGlobalSearch] = useState('');
 
-  const [users, setUsers] = useState<User[]>(() =>
-    stripSensitiveUserFields(loadState('users', initialUsers))
-  );
-  const [currentUserId, setCurrentUserId] = useState<string | null>(() =>
-    loadState('currentUserId', 'USR-1001')
-  );
+  // Auth & User state — NEVER seeded with demo user, ALWAYS starts logged out until Firebase Auth resolves
+  const [authReady, setAuthReady] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [pendingGoogleRegistration, setPendingGoogleRegistration] =
+    useState<PendingGoogleRegistration | null>(null);
+  const isRegisteringRef = useRef(false);
 
   const [adminSession, setAdminSession] = useState<AdminSessionState>(() => {
     try {
@@ -357,26 +476,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [packages, setPackages] = useState<DiamondPackage[]>(() =>
     loadState('packages', initialPackages)
   );
-  const [orders, setOrders] = useState<TopUpOrder[]>(() => loadState('orders', initialOrders));
+  const [orders, setOrders] = useState<TopUpOrder[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>(() =>
     loadState('tournaments', initialTournaments)
   );
   const [tasks, setTasks] = useState<IncomeTask[]>(() => loadState('tasks', initialTasks));
-  const [taskSubmissions, setTaskSubmissions] = useState<TaskSubmission[]>(() =>
-    loadState('taskSubmissions', initialTaskSubmissions)
-  );
-  const [deposits, setDeposits] = useState<DepositRequest[]>(() =>
-    loadState('deposits', initialDeposits)
-  );
-  const [withdrawals, setWithdrawals] = useState<WithdrawRequest[]>(() =>
-    loadState('withdrawals', initialWithdrawals)
-  );
-  const [transactions, setTransactions] = useState<WalletTransaction[]>(() =>
-    loadState('transactions', initialTransactions)
-  );
-  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>(() =>
-    loadState('paymentSettings', initialPaymentSettings)
-  );
+  const [taskSubmissions, setTaskSubmissions] = useState<TaskSubmission[]>([]);
+  const [deposits, setDeposits] = useState<DepositRequest[]>([]);
+  const [withdrawals, setWithdrawals] = useState<WithdrawRequest[]>([]);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>(() => {
+    const loaded = loadState('paymentSettings', initialPaymentSettings);
+    return {
+      ...initialPaymentSettings,
+      ...loaded,
+      gateways: (loaded.gateways || initialPaymentSettings.gateways)
+        .filter((gw) => (gw.id as string) !== 'card')
+        .map((gw) =>
+          gw.id === 'rocket'
+            ? {
+                ...gw,
+                name: 'Rocket',
+                instructions: 'Dial *322# or use Rocket App -> Send Money to 12-digit account.',
+              }
+            : gw
+        ),
+    };
+  });
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>(() =>
     loadState('blogPosts', initialBlogPosts)
   );
@@ -385,22 +511,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>(() =>
     loadState('contactMessages', initialContactMessages)
   );
-  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() =>
-    loadState('supportTickets', initialSupportTickets)
-  );
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() =>
-    loadState('auditLogs', initialAuditLogs)
-  );
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
 
   const [cart, setCart] = useState<CartItem[]>(() => loadState('cart', []));
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [wishlist, setWishlist] = useState<string[]>(() =>
-    loadState('wishlist', ['PKG-115', 'PKG-WEEKLY'])
-  );
+  const [wishlist, setWishlist] = useState<string[]>(() => loadState('wishlist', []));
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const [lockedPendingByUser, setLockedPendingByUser] = useState<Record<string, number>>({});
 
-  const currentUser = users.find((u) => u.id === currentUserId) || null;
+  const currentUser = currentUserId ? users.find((u) => u.id === currentUserId) || null : null;
+
+  useEffect(() => {
+    purgeLegacyUserStorage();
+  }, []);
+
+  // Live OS prefers-color-scheme listener
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // Sync resolved theme onto <html> & persist preference cleanly without flash
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    root.setAttribute('data-theme', theme);
+    root.setAttribute('data-theme-pref', themePreference);
+    root.style.colorScheme = theme;
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, themePreference);
+      localStorage.setItem('theme', themePreference);
+    } catch {
+      // ignore
+    }
+  }, [theme, themePreference]);
 
   const applyBackendBalancesMap = (
     balancesByUser?: Record<
@@ -433,28 +582,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLockedPendingByUser(lockedMap);
   };
 
+  const getBackendAuthHeaders = async (preferAdmin = false): Promise<Record<string, string>> => {
+    const headers: Record<string, string> = {};
+    if (preferAdmin && adminSession.authenticated && adminSession.sessionToken) {
+      headers['X-Admin-Token'] = adminSession.sessionToken;
+    }
+    const fbToken = auth.currentUser ? await auth.currentUser.getIdToken().catch(() => '') : '';
+    if (fbToken) {
+      headers.Authorization = `Bearer ${fbToken}`;
+    } else if (adminSession.authenticated && adminSession.sessionToken) {
+      headers.Authorization = `Bearer ${adminSession.sessionToken}`;
+    }
+    return headers;
+  };
+
   const refreshWalletFromBackend = async () => {
     try {
-      const res = await fetch('/api/wallet/state');
+      const headers = await getBackendAuthHeaders(true);
+      const res = await fetch('/api/wallet/state', { headers });
       if (!res.ok) return;
       const data = await res.json();
       if (!data?.ok) return;
+
       if (data.balancesByUser) {
         applyBackendBalancesMap(data.balancesByUser);
       }
       if (Array.isArray(data.ledger)) {
-        setTransactions(data.ledger);
+        setTransactions((prev) => {
+          const serverIds = new Set(data.ledger.map((x: WalletTransaction) => x.id));
+          const merged = [
+            ...data.ledger,
+            ...prev.filter((item) => !serverIds.has(item.id)),
+          ];
+          return merged;
+        });
       }
       if (Array.isArray(data.deposits)) {
-        setDeposits(data.deposits);
+        setDeposits((prev) => {
+          const serverIds = new Set(data.deposits.map((x: DepositRequest) => x.id));
+          return [...data.deposits, ...prev.filter((item) => !serverIds.has(item.id))];
+        });
       }
       if (Array.isArray(data.withdrawals)) {
-        setWithdrawals(data.withdrawals);
+        setWithdrawals((prev) => {
+          const serverIds = new Set(data.withdrawals.map((x: WithdrawRequest) => x.id));
+          return [...data.withdrawals, ...prev.filter((item) => !serverIds.has(item.id))];
+        });
       }
       if (data.paymentSettings) {
-        setPaymentSettings((prev) => ({ ...prev, ...data.paymentSettings }));
+        setPaymentSettings((prev) => ({
+          ...prev,
+          ...data.paymentSettings,
+          gateways: (data.paymentSettings.gateways || prev.gateways).filter(
+            (g: { id: string }) => g.id !== 'card'
+          ),
+        }));
       }
-      if (Array.isArray(data.auditLogs) && data.auditLogs.length > 0) {
+      if (Array.isArray(data.auditLogs) && adminSession.authenticated) {
         setAuditLogs(data.auditLogs);
       }
     } catch {
@@ -462,9 +646,140 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const loadUserRecordsFromFirestore = async (uid: string) => {
+    try {
+      const [ordSnap, depSnap, wthSnap, trxSnap, subSnap, tckSnap] = await Promise.all([
+        getDocs(query(collection(db, 'orders'), where('userId', '==', uid))),
+        getDocs(query(collection(db, 'deposits'), where('userId', '==', uid))),
+        getDocs(query(collection(db, 'withdrawals'), where('userId', '==', uid))),
+        getDocs(query(collection(db, 'transactions'), where('userId', '==', uid))),
+        getDocs(query(collection(db, 'task_submissions'), where('userId', '==', uid))),
+        getDocs(query(collection(db, 'support_tickets'), where('userId', '==', uid))),
+      ]);
+
+      const sortDesc = <T extends { createdAt?: string; submittedAt?: string }>(arr: T[]) =>
+        [...arr].sort((a, b) =>
+          (b.createdAt || b.submittedAt || '').localeCompare(a.createdAt || a.submittedAt || '')
+        );
+
+      setOrders(sortDesc(ordSnap.docs.map((d) => d.data() as TopUpOrder)));
+      setDeposits(sortDesc(depSnap.docs.map((d) => d.data() as DepositRequest)));
+      setWithdrawals(sortDesc(wthSnap.docs.map((d) => d.data() as WithdrawRequest)));
+      setTransactions(sortDesc(trxSnap.docs.map((d) => d.data() as WalletTransaction)));
+      setTaskSubmissions(sortDesc(subSnap.docs.map((d) => d.data() as TaskSubmission)));
+      setSupportTickets(sortDesc(tckSnap.docs.map((d) => d.data() as SupportTicket)));
+    } catch (err) {
+      try {
+        handleFirestoreError(err, OperationType.LIST, `user_records/${uid}`);
+      } catch {
+        // Logged cleanly
+      }
+    }
+  };
+
+  // Real Firebase Auth State Listener (persists across refresh/tab reopen until logout)
+  useEffect(() => {
+    let active = true;
+    let unsubscribeAuth: (() => void) | undefined;
+
+    authPersistenceReady.finally(() => {
+      if (!active) return;
+      unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+        if (!active) return;
+
+        if (!fbUser) {
+          setCurrentUserId(null);
+          setPendingGoogleRegistration(null);
+          if (!adminSession.authenticated) {
+            setUsers([]);
+          }
+          setOrders([]);
+          setDeposits([]);
+          setWithdrawals([]);
+          setTransactions([]);
+          setTaskSubmissions([]);
+          setSupportTickets([]);
+          await refreshWalletFromBackend();
+          if (active) setAuthReady(true);
+          return;
+        }
+
+        // Let register() finish its Firestore profile creation before reading
+        if (isRegisteringRef.current) {
+          if (active) setAuthReady(true);
+          return;
+        }
+
+        try {
+          const userSnap = await getDoc(doc(db, 'users', fbUser.uid));
+          if (!active) return;
+
+          if (userSnap.exists()) {
+            const loadedUser = mapDocToUser(
+              fbUser.uid,
+              userSnap.data() as Record<string, unknown>
+            );
+            setUsers((prev) => {
+              const filtered = prev.filter((u) => u.id !== loadedUser.id);
+              return [loadedUser, ...filtered];
+            });
+            setCurrentUserId(loadedUser.id);
+            setPendingGoogleRegistration(null);
+
+            await loadUserRecordsFromFirestore(fbUser.uid);
+            await refreshWalletFromBackend();
+          } else {
+            // Authenticated with Firebase (e.g. first-time Google user) without completed profile yet
+            setCurrentUserId(null);
+            setPendingGoogleRegistration({
+              uid: fbUser.uid,
+              email: fbUser.email || '',
+              name: fbUser.displayName || '',
+              photoURL: fbUser.photoURL || undefined,
+            });
+            await refreshWalletFromBackend();
+          }
+        } catch (err) {
+          try {
+            handleFirestoreError(err, OperationType.GET, `users/${fbUser.uid}`);
+          } catch {
+            // logged
+          }
+        } finally {
+          if (active) setAuthReady(true);
+        }
+      });
+    });
+
+    return () => {
+      active = false;
+      if (unsubscribeAuth) unsubscribeAuth();
+    };
+  }, []);
+
+  // Re-sync wallet & admin records whenever admin session becomes active
   useEffect(() => {
     refreshWalletFromBackend();
-  }, []);
+    if (adminSession.authenticated && auth.currentUser) {
+      Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'orders')),
+        getDocs(collection(db, 'task_submissions')),
+        getDocs(collection(db, 'support_tickets')),
+      ])
+        .then(([uSnap, oSnap, sSnap, tSnap]) => {
+          if (!uSnap.empty) {
+            setUsers(uSnap.docs.map((d) => mapDocToUser(d.id, d.data() as Record<string, unknown>)));
+          }
+          if (!oSnap.empty) setOrders(oSnap.docs.map((d) => d.data() as TopUpOrder));
+          if (!sSnap.empty) setTaskSubmissions(sSnap.docs.map((d) => d.data() as TaskSubmission));
+          if (!tSnap.empty) setSupportTickets(tSnap.docs.map((d) => d.data() as SupportTicket));
+        })
+        .catch(() => {
+          // Firestore admin read requires Firebase Admin auth too
+        });
+    }
+  }, [adminSession.authenticated]);
 
   // 1. Live Firestore Subscription for Public Settings (/settings/public)
   useEffect(() => {
@@ -495,9 +810,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               typeof data.supportEmail === 'string'
                 ? normalizeSupportEmail(data.supportEmail)
                 : prev.supportEmail,
-            supportPhone: typeof data.supportPhone === 'string' ? data.supportPhone : prev.supportPhone,
+            supportPhone:
+              typeof data.supportPhone === 'string' ? data.supportPhone : prev.supportPhone,
             supportWhatsapp:
-              typeof data.supportWhatsapp === 'string' ? data.supportWhatsapp : prev.supportWhatsapp,
+              typeof data.supportWhatsapp === 'string'
+                ? data.supportWhatsapp
+                : prev.supportWhatsapp,
             supportTelegram:
               typeof data.supportTelegram === 'string'
                 ? normalizeSupportTelegram(data.supportTelegram)
@@ -596,38 +914,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearInterval(timer);
   }, [adminSession]);
 
-  // Sync light/dark mode classes on <html> and persist preference in localStorage
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    root.setAttribute('data-theme', theme);
-    root.style.colorScheme = theme;
-    try {
-      localStorage.setItem('theme', theme);
-    } catch {
-      // ignore storage quota errors
-    }
-    saveState('theme', theme);
-  }, [theme]);
-
+  // Persist ONLY non-PII public/UI preferences cleanly (zero user/wallet/order PII in localStorage)
   useEffect(() => saveState('language', language), [language]);
   useEffect(() => saveState('siteSettings', siteSettings), [siteSettings]);
-  useEffect(() => saveState('users', stripSensitiveUserFields(users)), [users]);
-  useEffect(() => saveState('currentUserId', currentUserId), [currentUserId]);
   useEffect(() => saveState('packages', packages), [packages]);
-  useEffect(() => saveState('orders', orders), [orders]);
   useEffect(() => saveState('tournaments', tournaments), [tournaments]);
   useEffect(() => saveState('tasks', tasks), [tasks]);
-  useEffect(() => saveState('taskSubmissions', taskSubmissions), [taskSubmissions]);
-  useEffect(() => saveState('deposits', deposits), [deposits]);
-  useEffect(() => saveState('withdrawals', withdrawals), [withdrawals]);
-  useEffect(() => saveState('transactions', transactions), [transactions]);
   useEffect(() => saveState('paymentSettings', paymentSettings), [paymentSettings]);
   useEffect(() => saveState('blogPosts', blogPosts), [blogPosts]);
   useEffect(() => saveState('contactMessages', contactMessages), [contactMessages]);
-  useEffect(() => saveState('supportTickets', supportTickets), [supportTickets]);
-  useEffect(() => saveState('auditLogs', auditLogs), [auditLogs]);
   useEffect(() => saveState('cart', cart), [cart]);
   useEffect(() => saveState('wishlist', wishlist), [wishlist]);
 
@@ -652,7 +947,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const requireAdmin = (): boolean => {
-    if (!adminSession.authenticated || !adminSession.sessionToken || Date.now() >= adminSession.expiresAt) {
+    if (
+      !adminSession.authenticated ||
+      !adminSession.sessionToken ||
+      Date.now() >= adminSession.expiresAt
+    ) {
       addToast(
         'Admin Authentication Required',
         'Please sign in to the Production Admin Console to perform this action.',
@@ -671,10 +970,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
-  const navigate = (page: PageView) => {
+  const navigate = (page: PageView, options?: { replace?: boolean }) => {
     const targetPath = getPathForPage(page);
     if (location.pathname !== targetPath) {
-      routerNavigate(targetPath);
+      routerNavigate(targetPath, { replace: options?.replace });
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -689,11 +988,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setThemePreferenceState(theme === 'dark' ? 'light' : 'dark');
   };
 
   const setTheme = (mode: ThemeMode) => {
-    setThemeState(mode);
+    setThemePreferenceState(mode);
   };
 
   const t = (key: string): string => {
@@ -716,7 +1015,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setAuditLogs((prev) => [entry, ...prev]);
 
-    // Sync to Firestore /audit_logs/{logId} if Firebase Auth is active as Admin
     if (auth.currentUser) {
       setDoc(doc(db, 'audit_logs', logId), {
         id: logId,
@@ -838,13 +1136,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { ok: true };
       }
     } catch {
-      // Static cPanel hosting fallback: use Firebase Authentication directly when /api is not present
+      // ignore
     }
 
     return {
       ok: false,
       error:
-        'On static hosting, please sign in with "Continue with Google (Principal Admin)" via Firebase Authentication.',
+        'Please sign in with "Continue with Google (Principal Admin)" via Firebase Authentication.',
     };
   };
 
@@ -852,58 +1150,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const cred = await signInWithPopup(auth, googleProvider);
       const fbUser = cred.user;
+      const idToken = await fbUser.getIdToken();
       let resolvedEmail = fbUser.email || '';
       let resolvedUsername = 'admin';
       let resolvedToken = '';
       let resolvedExpiresAt = Date.now() + 30 * 60 * 1000;
       let resolvedMustChangePassword = false;
 
-      try {
-        const res = await fetch('/api/admin/auth/firebase-exchange', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            uid: fbUser.uid,
-            email: fbUser.email,
-            emailVerified: fbUser.emailVerified,
-          }),
-        });
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          const data = await res.json();
-          if (!res.ok || !data.ok) {
-            await signOut(auth);
-            return {
-              ok: false,
-              error: data.error || 'This Google account is not authorized as Principal Admin.',
-            };
-          }
-          resolvedEmail = data.admin.email;
-          resolvedUsername = data.admin.username;
-          resolvedToken = data.sessionToken;
-          resolvedExpiresAt = data.expiresAt;
-          resolvedMustChangePassword = Boolean(data.mustChangePassword);
-        }
-      } catch {
-        // Static cPanel hosting fallback when Node /api server is not running
-      }
-
-      if (!resolvedToken) {
-        // Verify Principal Admin identity for static hosting via Firebase Auth token
-        if (
-          !fbUser.emailVerified ||
-          fbUser.email?.toLowerCase() !== defaultAdminSession.email.toLowerCase()
-        ) {
+      const res = await fetch('/api/admin/auth/firebase-exchange', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({}),
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
           await signOut(auth);
           return {
             ok: false,
-            error: 'This Google account is not authorized as Principal Admin.',
+            error: data.error || 'This Google account is not authorized as Principal Admin.',
           };
         }
-        resolvedToken = await fbUser.getIdToken();
+        resolvedEmail = data.admin.email;
+        resolvedUsername = data.admin.username;
+        resolvedToken = data.sessionToken;
+        resolvedExpiresAt = data.expiresAt;
+        resolvedMustChangePassword = Boolean(data.mustChangePassword);
       }
 
-      // Sync AdminRecord in Firestore /admins/{uid}
+      if (!resolvedToken) {
+        await signOut(auth);
+        return {
+          ok: false,
+          error: 'Administrator authorization verification failed on the server.',
+        };
+      }
+
+      // Ensure AdminRecord exists in Firestore /admins/{uid}
       try {
         await setDoc(
           doc(db, 'admins', fbUser.uid),
@@ -940,7 +1227,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {
       return {
         ok: false,
-        error: err instanceof Error ? err.message : 'Firebase Google sign-in cancelled.',
+        error: mapFirebaseAuthError(err),
       };
     }
   };
@@ -998,7 +1285,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         await sendPasswordResetEmail(auth, cleanEmail);
       } catch {
-        // Do not leak whether email exists in Firebase Auth
+        // Safe privacy behavior
       }
     } catch {
       // Safe fallback
@@ -1020,11 +1307,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {
         // ignore
       }
-    }
-    try {
-      await signOut(auth);
-    } catch {
-      // ignore
     }
     setAdminSession((prev) => ({
       ...prev,
@@ -1074,214 +1356,440 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ============================================================================
-  // PLAYER AUTH ACTIONS
+  // REAL PLAYER AUTHENTICATION (FIREBASE AUTH + FIRESTORE PROFILE)
   // ============================================================================
-  const login = (identifier: string, password?: string) => {
-    const cleaned = sanitizeText(identifier, 160).toLowerCase();
-    const matched = users.find(
-      (u) => u.email.toLowerCase() === cleaned || u.phone.trim() === cleaned
-    );
-    if (!matched) {
-      addToast('Sign In Failed', 'Invalid credentials or account not found.', 'error');
-      return;
-    }
-    if (matched.banned) {
-      addToast(
-        'Account Suspended',
-        'Your account has been restricted by moderation. Contact support@h41fftopup.com.',
-        'error'
-      );
-      return;
-    }
-    if (!password || password.length < 4) {
-      addToast('Invalid Credentials', 'Please enter your account password.', 'error');
-      return;
-    }
-
-    fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: cleaned, password }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          addToast('Invalid Credentials', 'Incorrect password entered.', 'error');
-          return;
-        }
-        setCurrentUserId(matched.id);
-        addToast('Welcome Back!', `Signed in as ${matched.name} (${matched.ffIgn})`, 'success');
-        navigate('account');
-      })
-      .catch(() => {
-        setCurrentUserId(matched.id);
-        addToast('Welcome Back!', `Signed in as ${matched.name} (${matched.ffIgn})`, 'success');
-        navigate('account');
+  const syncPhoneMapWithServer = async (phone: string, email: string) => {
+    try {
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+      if (!idToken) return;
+      await fetch('/api/auth/register-phone-map', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ phone, email }),
       });
+    } catch {
+      // non-blocking
+    }
   };
 
-  const register = (payload: {
+  const login = async (identifier: string, password?: string): Promise<AuthActionResult> => {
+    const cleaned = sanitizeText(identifier, 160).trim();
+    if (!cleaned || !password || password.length < 6) {
+      const msg = 'Please enter your email (or phone number) and password (min 6 characters).';
+      addToast('Sign In Required', msg, 'error');
+      return { ok: false, error: msg };
+    }
+
+    let emailToUse = cleaned.toLowerCase();
+    if (!cleaned.includes('@')) {
+      try {
+        const res = await fetch('/api/auth/resolve-identifier', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: cleaned }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.ok || !data?.email) {
+          const msg =
+            data?.error ||
+            'No account linked to that phone number. Please sign in with your registered email address.';
+          addToast('Account Not Found', msg, 'error');
+          return { ok: false, error: msg };
+        }
+        emailToUse = String(data.email).toLowerCase();
+      } catch {
+        const msg = 'Please enter your registered email address to sign in.';
+        addToast('Invalid Email', msg, 'error');
+        return { ok: false, error: msg };
+      }
+    }
+
+    if (!isValidEmail(emailToUse)) {
+      const msg = 'Please enter a valid email address.';
+      addToast('Invalid Email', msg, 'error');
+      return { ok: false, error: msg };
+    }
+
+    try {
+      const cred = await signInWithEmailAndPassword(auth, emailToUse, password);
+      const fbUser = cred.user;
+      const userSnap = await getDoc(doc(db, 'users', fbUser.uid));
+
+      if (!userSnap.exists()) {
+        // User exists in Firebase Auth but needs onboarding profile completion
+        setPendingGoogleRegistration({
+          uid: fbUser.uid,
+          email: fbUser.email || emailToUse,
+          name: fbUser.displayName || '',
+          photoURL: fbUser.photoURL || undefined,
+        });
+        addToast('Complete Profile', 'Please complete your player registration details.', 'info');
+        navigate('register');
+        return { ok: true, needsRegistration: true };
+      }
+
+      const loadedUser = mapDocToUser(fbUser.uid, userSnap.data() as Record<string, unknown>);
+      if (loadedUser.banned) {
+        await signOut(auth);
+        const msg = 'Your account has been suspended by moderation. Contact support@h41fftopup.com.';
+        addToast('Account Suspended', msg, 'error');
+        return { ok: false, error: msg };
+      }
+
+      setUsers((prev) => [loadedUser, ...prev.filter((u) => u.id !== loadedUser.id)]);
+      setCurrentUserId(loadedUser.id);
+      await loadUserRecordsFromFirestore(fbUser.uid);
+      await refreshWalletFromBackend();
+      addToast('Welcome Back!', `Signed in as ${loadedUser.name}.`, 'success');
+      return { ok: true, needsRegistration: false };
+    } catch (err) {
+      const message = mapFirebaseAuthError(err);
+      addToast('Sign In Failed', message, 'error');
+      return { ok: false, error: message };
+    }
+  };
+
+  const signInWithGoogle = async (): Promise<AuthActionResult> => {
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      const fbUser = cred.user;
+      const userSnap = await getDoc(doc(db, 'users', fbUser.uid));
+
+      if (userSnap.exists()) {
+        // Returning Google user -> restore existing profile, balance & history
+        const loadedUser = mapDocToUser(fbUser.uid, userSnap.data() as Record<string, unknown>);
+        if (loadedUser.banned) {
+          await signOut(auth);
+          const msg = 'Your account has been restricted by moderation.';
+          addToast('Account Suspended', msg, 'error');
+          return { ok: false, error: msg };
+        }
+        setUsers((prev) => [loadedUser, ...prev.filter((u) => u.id !== loadedUser.id)]);
+        setCurrentUserId(loadedUser.id);
+        setPendingGoogleRegistration(null);
+        await loadUserRecordsFromFirestore(fbUser.uid);
+        await refreshWalletFromBackend();
+        addToast('Welcome Back!', `Signed in with Google as ${loadedUser.name}.`, 'success');
+        return { ok: true, needsRegistration: false };
+      }
+
+      // First-time Google user -> require registration details step BEFORE logging into dashboard
+      setCurrentUserId(null);
+      setPendingGoogleRegistration({
+        uid: fbUser.uid,
+        email: fbUser.email || '',
+        name: fbUser.displayName || '',
+        photoURL: fbUser.photoURL || undefined,
+      });
+      addToast(
+        'One Last Step',
+        'Please complete your registration details to finish creating your H41FFTOPUP account.',
+        'info'
+      );
+      return { ok: true, needsRegistration: true };
+    } catch (err) {
+      const message = mapFirebaseAuthError(err);
+      addToast('Google Sign-In Error', message, 'error');
+      return { ok: false, error: message };
+    }
+  };
+
+  const completeGoogleRegistration = async (payload: {
+    name: string;
+    phone: string;
+    ffUid?: string;
+    ffIgn?: string;
+    referralCodeInput?: string;
+  }): Promise<AuthActionResult> => {
+    const fbUser = auth.currentUser;
+    if (!fbUser) {
+      const msg = 'Google authentication session expired. Please sign in with Google again.';
+      addToast('Session Expired', msg, 'error');
+      return { ok: false, error: msg };
+    }
+
+    const cleanName = sanitizeText(payload.name, 100);
+    const cleanPhone = sanitizeText(payload.phone, 20).replace(/[\s-]/g, '');
+    const cleanUid = sanitizeText(payload.ffUid || '', 30);
+    const cleanIgn = sanitizeText(payload.ffIgn || '', 60) || 'BD_PLAYER';
+    const cleanRefBy = sanitizeText(payload.referralCodeInput || '', 32).toUpperCase();
+
+    if (!cleanName || cleanName.length < 2) {
+      const msg = 'Please enter your full name (at least 2 characters).';
+      addToast('Invalid Name', msg, 'error');
+      return { ok: false, error: msg };
+    }
+    if (!isValidBdPhone(cleanPhone)) {
+      const msg = 'Please enter a valid 11-digit Bangladesh mobile number (e.g. 017XXXXXXXX).';
+      addToast('Invalid Phone Number', msg, 'error');
+      return { ok: false, error: msg };
+    }
+    if (cleanUid && !isValidFreeFireUid(cleanUid)) {
+      const msg = 'Free Fire Player UID must be 8 to 12 numeric digits (or leave blank for now).';
+      addToast('Invalid Free Fire UID', msg, 'error');
+      return { ok: false, error: msg };
+    }
+
+    const referralCode = buildReferralCode(cleanName, fbUser.uid);
+    const joinedAt = new Date().toISOString().slice(0, 10);
+    const email = (fbUser.email || pendingGoogleRegistration?.email || '').toLowerCase();
+
+    try {
+      await setDoc(doc(db, 'users', fbUser.uid), {
+        id: fbUser.uid,
+        uid: fbUser.uid,
+        name: cleanName,
+        email,
+        phone: cleanPhone,
+        ...(fbUser.photoURL ? { photoURL: fbUser.photoURL } : {}),
+        role: 'user',
+        ffUid: cleanUid,
+        ffIgn: cleanIgn,
+        verified: Boolean(fbUser.emailVerified),
+        banned: false,
+        profileCompleted: true,
+        mainBalance: 0,
+        incomeBalance: 0,
+        bonusBalance: 0,
+        referralCode,
+        ...(cleanRefBy ? { referredBy: cleanRefBy } : {}),
+        referralCount: 0,
+        totalEarned: 0,
+        tournamentWins: 0,
+        joinedAt,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      await syncPhoneMapWithServer(cleanPhone, email);
+
+      const createdUser: User = {
+        id: fbUser.uid,
+        uid: fbUser.uid,
+        name: cleanName,
+        email,
+        phone: cleanPhone,
+        photoURL: fbUser.photoURL || undefined,
+        role: 'user',
+        ffUid: cleanUid,
+        ffIgn: cleanIgn,
+        verified: Boolean(fbUser.emailVerified),
+        banned: false,
+        profileCompleted: true,
+        mainBalance: 0,
+        incomeBalance: 0,
+        bonusBalance: 0,
+        referralCode,
+        referredBy: cleanRefBy || undefined,
+        referralCount: 0,
+        totalEarned: 0,
+        tournamentWins: 0,
+        joinedAt,
+      };
+
+      setUsers((prev) => [createdUser, ...prev.filter((u) => u.id !== createdUser.id)]);
+      setCurrentUserId(createdUser.id);
+      setPendingGoogleRegistration(null);
+      await loadUserRecordsFromFirestore(fbUser.uid);
+      await refreshWalletFromBackend();
+      addToast('Account Created!', `Welcome to H41FFTOPUP, ${cleanName}!`, 'success');
+      navigate('account', { replace: true });
+      return { ok: true };
+    } catch (err) {
+      const message = mapFirebaseAuthError(err);
+      addToast('Registration Failed', message, 'error');
+      return { ok: false, error: message };
+    }
+  };
+
+  const cancelGoogleRegistration = async () => {
+    setPendingGoogleRegistration(null);
+    setCurrentUserId(null);
+    try {
+      await signOut(auth);
+    } catch {
+      // ignore
+    }
+    navigate('login', { replace: true });
+  };
+
+  const register = async (payload: {
     name: string;
     email: string;
     phone: string;
     password: string;
-    ffUid: string;
-    ffIgn: string;
+    ffUid?: string;
+    ffIgn?: string;
     referralCodeInput?: string;
-  }): boolean => {
-    const cleanName = sanitizeText(payload.name, 80);
+  }): Promise<AuthActionResult> => {
+    const cleanName = sanitizeText(payload.name, 100);
     const cleanEmail = sanitizeText(payload.email, 160).toLowerCase();
     const cleanPhone = sanitizeText(payload.phone, 20).replace(/[\s-]/g, '');
-    const cleanUid = sanitizeText(payload.ffUid, 16);
-    const cleanIgn = sanitizeText(payload.ffIgn, 40) || 'BD_PLAYER';
+    const cleanUid = sanitizeText(payload.ffUid || '', 30);
+    const cleanIgn = sanitizeText(payload.ffIgn || '', 60) || 'BD_PLAYER';
+    const cleanRefBy = sanitizeText(payload.referralCodeInput || '', 32).toUpperCase();
 
     if (!cleanName || cleanName.length < 2) {
-      addToast('Invalid Name', 'Please enter a valid full name (at least 2 characters).', 'error');
-      return false;
+      const msg = 'Please enter your full name (at least 2 characters).';
+      addToast('Invalid Name', msg, 'error');
+      return { ok: false, error: msg };
     }
     if (!isValidEmail(cleanEmail)) {
-      addToast('Invalid Email', 'Please enter a valid email address.', 'error');
-      return false;
+      const msg = 'Please enter a valid email address.';
+      addToast('Invalid Email', msg, 'error');
+      return { ok: false, error: msg };
     }
     if (!isValidBdPhone(cleanPhone)) {
-      addToast(
-        'Invalid BD Mobile Number',
-        'Please enter a valid 11-digit Bangladesh mobile number (e.g. 017XXXXXXXX).',
-        'error'
-      );
-      return false;
+      const msg = 'Please enter a valid 11-digit Bangladesh mobile number (e.g. 017XXXXXXXX).';
+      addToast('Invalid BD Mobile Number', msg, 'error');
+      return { ok: false, error: msg };
     }
-    if (!isValidFreeFireUid(cleanUid)) {
-      addToast(
-        'Invalid Free Fire UID',
-        'Free Fire Player UID must be 8 to 12 numeric digits.',
-        'error'
-      );
-      return false;
+    if (cleanUid && !isValidFreeFireUid(cleanUid)) {
+      const msg = 'Free Fire Player UID must be 8 to 12 numeric digits (or leave blank).';
+      addToast('Invalid Free Fire UID', msg, 'error');
+      return { ok: false, error: msg };
     }
     if (!payload.password || payload.password.length < 6) {
-      addToast('Weak Password', 'Password must be at least 6 characters long.', 'error');
-      return false;
+      const msg = 'Password must be at least 6 characters long.';
+      addToast('Weak Password', msg, 'error');
+      return { ok: false, error: msg };
     }
 
-    const exists = users.some(
-      (u) => u.email.toLowerCase() === cleanEmail || u.phone === cleanPhone
-    );
-    if (exists) {
-      addToast('Account Exists', 'An account with this email or mobile number already exists.', 'error');
-      return false;
-    }
+    isRegisteringRef.current = true;
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, cleanEmail, payload.password);
+      const fbUser = cred.user;
+      await updateFirebaseProfile(fbUser, { displayName: cleanName }).catch(() => {});
 
-    const newUserId = `USR-${Math.floor(1006 + Math.random() * 8990)}`;
-    const generatedRefCode =
-      (cleanName.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 5) || 'PLAYER') +
-      Math.floor(10 + Math.random() * 89);
+      const referralCode = buildReferralCode(cleanName, fbUser.uid);
+      const joinedAt = new Date().toISOString().slice(0, 10);
 
-    let referrerUser: User | undefined;
-    if (payload.referralCodeInput) {
-      const cleanRef = sanitizeText(payload.referralCodeInput, 24).toUpperCase();
-      referrerUser = users.find((u) => u.referralCode.toUpperCase() === cleanRef);
-    }
-
-    fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: newUserId,
+      await setDoc(doc(db, 'users', fbUser.uid), {
+        id: fbUser.uid,
+        uid: fbUser.uid,
+        name: cleanName,
         email: cleanEmail,
         phone: cleanPhone,
-        password: payload.password,
-      }),
-    }).catch(() => {
-      // Non-blocking
-    });
-
-    const welcomeBonus = 20;
-    const newUser: User = {
-      id: newUserId,
-      name: cleanName,
-      email: cleanEmail,
-      phone: cleanPhone,
-      role: 'user',
-      ffUid: cleanUid,
-      ffIgn: cleanIgn,
-      verified: true,
-      banned: false,
-      mainBalance: 0,
-      incomeBalance: referrerUser ? 15 : 0,
-      bonusBalance: welcomeBonus,
-      referralCode: generatedRefCode,
-      referredBy: referrerUser?.referralCode,
-      referralCount: 0,
-      totalEarned: referrerUser ? 15 : 0,
-      tournamentWins: 0,
-      joinedAt: new Date().toISOString().slice(0, 10),
-    };
-
-    const newTrxList: WalletTransaction[] = [];
-
-    if (referrerUser) {
-      const refBonus = paymentSettings.referralBonusBdt;
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === referrerUser!.id
-            ? {
-                ...u,
-                incomeBalance: u.incomeBalance + refBonus,
-                totalEarned: u.totalEarned + refBonus,
-                referralCount: u.referralCount + 1,
-              }
-            : u
-        )
-      );
-      newTrxList.push({
-        id: `TRX-${Date.now()}-REF`,
-        userId: referrerUser.id,
-        type: 'Referral Bonus',
-        amountBdt: refBonus,
-        direction: 'credit',
-        balanceType: 'Income',
-        referenceId: newUserId,
-        description: `Referral reward for inviting ${cleanName}`,
-        status: 'Completed',
-        createdAt: nowStr(),
+        role: 'user',
+        ffUid: cleanUid,
+        ffIgn: cleanIgn,
+        verified: Boolean(fbUser.emailVerified),
+        banned: false,
+        profileCompleted: true,
+        mainBalance: 0,
+        incomeBalance: 0,
+        bonusBalance: 0,
+        referralCode,
+        ...(cleanRefBy ? { referredBy: cleanRefBy } : {}),
+        referralCount: 0,
+        totalEarned: 0,
+        tournamentWins: 0,
+        joinedAt,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
-    }
 
-    setUsers((prev) => [newUser, ...prev]);
-    if (newTrxList.length > 0) {
-      setTransactions((prev) => [...newTrxList, ...prev]);
+      await syncPhoneMapWithServer(cleanPhone, cleanEmail);
+
+      const newUser: User = {
+        id: fbUser.uid,
+        uid: fbUser.uid,
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        role: 'user',
+        ffUid: cleanUid,
+        ffIgn: cleanIgn,
+        verified: Boolean(fbUser.emailVerified),
+        banned: false,
+        profileCompleted: true,
+        mainBalance: 0,
+        incomeBalance: 0,
+        bonusBalance: 0,
+        referralCode,
+        referredBy: cleanRefBy || undefined,
+        referralCount: 0,
+        totalEarned: 0,
+        tournamentWins: 0,
+        joinedAt,
+      };
+
+      setUsers((prev) => [newUser, ...prev.filter((u) => u.id !== newUser.id)]);
+      setCurrentUserId(newUser.id);
+      setPendingGoogleRegistration(null);
+      await loadUserRecordsFromFirestore(fbUser.uid);
+      await refreshWalletFromBackend();
+      addToast('Registration Complete!', `Welcome ${cleanName}! Your account is ready.`, 'success');
+      navigate('account', { replace: true });
+      return { ok: true };
+    } catch (err) {
+      const message = mapFirebaseAuthError(err);
+      addToast('Registration Failed', message, 'error');
+      return { ok: false, error: message };
+    } finally {
+      isRegisteringRef.current = false;
     }
-    setCurrentUserId(newUser.id);
-    addToast(
-      'Registration Complete!',
-      `Welcome ${cleanName}! ৳${welcomeBonus} Bonus Balance credited${
-        referrerUser ? ` + ৳15 referral reward!` : '.'
-      }`,
-      'success'
-    );
-    navigate('account');
-    return true;
   };
 
-  const logout = () => {
+  const sendPasswordReset = async (email: string): Promise<AuthActionResult> => {
+    const cleanEmail = sanitizeText(email, 160).toLowerCase();
+    if (!isValidEmail(cleanEmail)) {
+      const msg = 'Please enter a valid email address to reset your password.';
+      addToast('Invalid Email', msg, 'error');
+      return { ok: false, error: msg };
+    }
+    try {
+      await sendPasswordResetEmail(auth, cleanEmail);
+      addToast(
+        'Reset Link Sent',
+        `If an account exists for ${cleanEmail}, a password reset email has been dispatched.`,
+        'success'
+      );
+      return { ok: true };
+    } catch (err) {
+      const message = mapFirebaseAuthError(err);
+      addToast('Password Reset Error', message, 'error');
+      return { ok: false, error: message };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch {
+      // ignore
+    }
     setCurrentUserId(null);
-    addToast('Signed Out', 'You have logged out of your account.', 'info');
-    navigate('home');
+    setPendingGoogleRegistration(null);
+    setUsers([]);
+    setOrders([]);
+    setDeposits([]);
+    setWithdrawals([]);
+    setTransactions([]);
+    setTaskSubmissions([]);
+    setSupportTickets([]);
+    setLockedPendingByUser({});
+    purgeLegacyUserStorage();
+    addToast('Signed Out', 'You have securely logged out of your account.', 'info');
+    routerNavigate('/', { replace: true });
   };
 
-  const updateProfile = (updates: SafeProfileUpdate): boolean => {
-    if (!currentUser) return false;
+  const updateProfile = async (updates: SafeProfileUpdate): Promise<boolean> => {
+    if (!currentUser || !auth.currentUser) return false;
 
     const nextName =
-      updates.name !== undefined ? sanitizeText(updates.name, 80) : currentUser.name;
+      updates.name !== undefined ? sanitizeText(updates.name, 100) : currentUser.name;
     const nextPhone =
       updates.phone !== undefined
         ? sanitizeText(updates.phone, 20).replace(/[\s-]/g, '')
         : currentUser.phone;
     const nextUid =
-      updates.ffUid !== undefined ? sanitizeText(updates.ffUid, 16) : currentUser.ffUid;
+      updates.ffUid !== undefined ? sanitizeText(updates.ffUid, 30) : currentUser.ffUid;
     const nextIgn =
-      updates.ffIgn !== undefined ? sanitizeText(updates.ffIgn, 40) : currentUser.ffIgn;
+      updates.ffIgn !== undefined ? sanitizeText(updates.ffIgn, 60) : currentUser.ffIgn;
 
     if (!nextName || nextName.length < 2) {
       addToast('Invalid Name', 'Full name must be at least 2 characters.', 'error');
@@ -1295,7 +1803,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       return false;
     }
-    if (!isValidFreeFireUid(nextUid)) {
+    if (nextUid && !isValidFreeFireUid(nextUid)) {
       addToast(
         'Invalid Free Fire UID',
         'Free Fire Player UID must be 8 to 12 numeric digits.',
@@ -1304,62 +1812,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === currentUser.id
-          ? {
-              ...u,
-              name: nextName,
-              phone: nextPhone,
-              ffUid: nextUid,
-              ffIgn: nextIgn || u.ffIgn,
-            }
-          : u
-      )
-    );
-    addToast('Profile Updated', 'Your account details and Free Fire UID have been saved.', 'success');
-    return true;
+    try {
+      await updateDoc(doc(db, 'users', currentUser.id), {
+        name: nextName,
+        phone: nextPhone,
+        ffUid: nextUid,
+        ffIgn: nextIgn || currentUser.ffIgn,
+        profileCompleted: true,
+        updatedAt: serverTimestamp(),
+      });
+      await syncPhoneMapWithServer(nextPhone, currentUser.email);
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === currentUser.id
+            ? {
+                ...u,
+                name: nextName,
+                phone: nextPhone,
+                ffUid: nextUid,
+                ffIgn: nextIgn || u.ffIgn,
+              }
+            : u
+        )
+      );
+      addToast('Profile Updated', 'Your account details and Free Fire UID have been saved.', 'success');
+      return true;
+    } catch (err) {
+      addToast('Save Failed', mapFirebaseAuthError(err), 'error');
+      return false;
+    }
   };
 
   const changePassword = async (
-    currentPassword: string,
+    _currentPassword: string,
     newPassword: string
   ): Promise<boolean> => {
-    if (!currentUser) return false;
-    if (!currentPassword) {
-      addToast('Authentication Required', 'Please enter your current password.', 'error');
-      return false;
-    }
+    if (!currentUser || !auth.currentUser) return false;
     if (!newPassword || newPassword.length < 6 || newPassword.length > 128) {
       addToast('Weak Password', 'New password must be between 6 and 128 characters.', 'error');
       return false;
     }
 
     try {
-      const res = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier: currentUser.email,
-          currentPassword,
-          newPassword,
-        }),
-      });
-      if (!res.ok) {
-        addToast('Authentication Failed', 'Your current password is incorrect.', 'error');
-        return false;
+      await updatePassword(auth.currentUser, newPassword);
+      addToast('Password Updated', 'Your password has been securely updated.', 'success');
+      return true;
+    } catch (err) {
+      const code =
+        typeof err === 'object' && err !== null && 'code' in err
+          ? String((err as { code?: unknown }).code || '')
+          : '';
+      if (code === 'auth/requires-recent-login') {
+        addToast(
+          'Re-Authentication Required',
+          'For security, please log out and sign in again before changing your password.',
+          'warning'
+        );
+      } else {
+        addToast('Update Failed', mapFirebaseAuthError(err), 'error');
       }
-    } catch {
-      // Fallback
+      return false;
     }
-
-    addToast('Password Updated', 'Your password has been securely updated on the server.', 'success');
-    return true;
   };
 
   // Cart & Wishlist
   const addToCart = (pkg: DiamondPackage, playerUid: string, playerIgn?: string) => {
-    const candidateUid = sanitizeText(playerUid, 16) || currentUser?.ffUid || '2849103842';
+    const candidateUid = sanitizeText(playerUid, 16) || currentUser?.ffUid || '';
     if (!isValidFreeFireUid(candidateUid)) {
       addToast(
         'Invalid Player UID',
@@ -1419,7 +1938,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Top Up Orders (Uses backend /api/vouchers/issue for UniPin PINs)
+  // Top Up Orders (Firestore + Backend Double-Entry Wallet Ledger + Server Voucher PIN)
   const placeTopUpOrder = (params: {
     pkg: DiamondPackage;
     quantity?: number;
@@ -1492,9 +2011,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
     }
 
-    const orderId = `ORD-${Math.floor(90880 + Math.random() * 9000)}`;
+    const orderId = `ORD-${Math.floor(100000 + Math.random() * 899999)}`;
     const initialPin = isUniPin ? 'UPBD-ISSUING...' : undefined;
-    const cleanIgn = sanitizeText(params.playerIgn, 40) || currentUser.ffIgn;
+    const cleanIgn = sanitizeText(params.playerIgn, 40) || currentUser.ffIgn || 'BD_PLAYER';
+    const createdAt = nowStr();
 
     const newOrder: TopUpOrder = {
       id: orderId,
@@ -1504,48 +2024,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       packageTitle: qty > 1 ? `${params.pkg.title} (x${qty})` : params.pkg.title,
       diamonds: params.pkg.diamonds * qty,
       amountBdt: totalBdt,
-      playerUid: cleanUid,
+      playerUid: cleanUid || 'UNIPIN',
       playerIgn: cleanIgn,
       topUpType: isUniPin ? 'unipin' : 'uid',
-      voucherPin: initialPin,
+      ...(initialPin ? { voucherPin: initialPin } : {}),
       paymentMethod: params.paymentMethod,
-      transactionId: cleanTrxId,
+      ...(cleanTrxId ? { transactionId: cleanTrxId } : {}),
       status: params.paymentMethod === 'wallet' ? 'Completed' : 'Pending',
-      createdAt: nowStr(),
+      createdAt,
     };
 
+    const trxId = `TRX-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
     const newTrx: WalletTransaction = {
-      id: `TRX-${Date.now()}`,
+      id: trxId,
       userId: currentUser.id,
       type: 'TopUp Order',
       amountBdt: totalBdt,
       direction: 'debit',
       balanceType: 'Main',
+      method: params.paymentMethod === 'wallet' ? 'Main Wallet' : params.paymentMethod.toUpperCase(),
       referenceId: orderId,
       description: `${newOrder.packageTitle} for UID ${cleanUid}`,
       status: params.paymentMethod === 'wallet' ? 'Completed' : 'Pending',
-      createdAt: nowStr(),
+      createdAt,
     };
 
     setOrders((prev) => [newOrder, ...prev]);
     setTransactions((prev) => [newTrx, ...prev]);
 
+    setDoc(doc(db, 'orders', orderId), newOrder).catch(() => {});
+    setDoc(doc(db, 'transactions', trxId), newTrx).catch(() => {});
+
     if (params.paymentMethod === 'wallet') {
-      fetch('/api/wallet/record-activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          type: 'TopUp Order',
-          direction: 'debit',
-          balanceType: 'Main',
-          amountBdt: totalBdt,
-          method: 'Wallet',
-          referenceId: orderId,
-          description: `${newOrder.packageTitle} for UID ${cleanUid}`,
-          status: 'Completed',
-        }),
-      })
+      getBackendAuthHeaders()
+        .then((headers) =>
+          fetch('/api/wallet/record-activity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: JSON.stringify({
+              userId: currentUser.id,
+              type: 'TopUp Order',
+              direction: 'debit',
+              balanceType: 'Main',
+              amountBdt: totalBdt,
+              method: 'Wallet',
+              referenceId: orderId,
+              description: `${newOrder.packageTitle} for UID ${cleanUid}`,
+              status: 'Completed',
+            }),
+          })
+        )
         .then(() => refreshWalletFromBackend())
         .catch(() => {});
     }
@@ -1562,6 +2090,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setOrders((prev) =>
               prev.map((o) => (o.id === orderId ? { ...o, voucherPin: data.voucherPin } : o))
             );
+            setDoc(doc(db, 'orders', orderId), { ...newOrder, voucherPin: data.voucherPin }).catch(
+              () => {}
+            );
             addToast(
               'UniPin Voucher Issued by Server!',
               `Order ${orderId} confirmed! Voucher PIN: ${data.voucherPin}`,
@@ -1569,9 +2100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             );
           }
         })
-        .catch(() => {
-          // ignore
-        });
+        .catch(() => {});
     } else {
       addToast(
         params.paymentMethod === 'wallet' ? 'Top Up Completed Instantly!' : 'Order Submitted!',
@@ -1694,34 +2223,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           u.id === currentUser.id ? { ...u, mainBalance: u.mainBalance - trn.entryFee } : u
         )
       );
+      const trxId = `TRX-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
       const trx: WalletTransaction = {
-        id: `TRX-${Date.now()}`,
+        id: trxId,
         userId: currentUser.id,
         type: 'Tournament Entry',
         amountBdt: trn.entryFee,
         direction: 'debit',
         balanceType: 'Main',
+        method: 'Main Wallet',
         referenceId: trn.id,
         description: `Entry Fee: ${trn.title}`,
         status: 'Completed',
         createdAt: nowStr(),
       };
       setTransactions((prev) => [trx, ...prev]);
-      fetch('/api/wallet/record-activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          type: 'Tournament Entry',
-          direction: 'debit',
-          balanceType: 'Main',
-          amountBdt: trn.entryFee,
-          method: 'Wallet',
-          referenceId: trn.id,
-          description: `Entry Fee: ${trn.title}`,
-          status: 'Completed',
-        }),
-      })
+      setDoc(doc(db, 'transactions', trxId), trx).catch(() => {});
+
+      getBackendAuthHeaders()
+        .then((headers) =>
+          fetch('/api/wallet/record-activity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: JSON.stringify({
+              userId: currentUser.id,
+              type: 'Tournament Entry',
+              direction: 'debit',
+              balanceType: 'Main',
+              amountBdt: trn.entryFee,
+              method: 'Wallet',
+              referenceId: trn.id,
+              description: `Entry Fee: ${trn.title}`,
+              status: 'Completed',
+            }),
+          })
+        )
         .then(() => refreshWalletFromBackend())
         .catch(() => {});
     }
@@ -1765,9 +2301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           );
         }
       })
-      .catch(() => {
-        // ignore
-      });
+      .catch(() => {});
 
     addToast(
       'Slot Confirmed!',
@@ -1818,8 +2352,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
+    const subId = `SUB-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
     const newSub: TaskSubmission = {
-      id: `SUB-${Math.floor(705 + Math.random() * 9000)}`,
+      id: subId,
       taskId: task.id,
       taskTitle: task.title,
       userId: currentUser.id,
@@ -1832,6 +2367,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setTaskSubmissions((prev) => [newSub, ...prev]);
+    setDoc(doc(db, 'task_submissions', subId), newSub).catch(() => {});
     addToast(
       'Proof Submitted for Verification',
       `Your submission for "${task.title}" (৳${task.rewardBdt}) is queued for moderator review.`,
@@ -1840,7 +2376,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
-  // Deposit (Authoritative Backend Double-Entry Ledger + Webhook Signature Check + Idempotency Key)
+  // Deposit (Authoritative Backend Double-Entry Ledger + Webhook Signature Check + Firestore Sync)
   const createDeposit = async (params: {
     method: PaymentGatewayName;
     channel: 'Manual' | 'Instant Gateway';
@@ -1862,7 +2398,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const minDep = paymentSettings.minDepositBdt || 25;
     const maxDep = paymentSettings.maxDepositBdt || 100000;
 
-    if (params.method !== 'card' && !isValidBdPhone(cleanSender)) {
+    if (!isValidBdPhone(cleanSender)) {
       addToast(
         'Invalid Sender Number',
         'Please enter a valid 11-digit Bangladesh mobile number (e.g. 017XXXXXXXX).',
@@ -1891,12 +2427,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       params.idempotencyKey || `IDEM-DEP-${currentUser.id}-${cleanTrxId || Date.now()}`;
 
     try {
+      const headers = await getBackendAuthHeaders();
       if (params.channel === 'Instant Gateway') {
         const res = await fetch('/api/wallet/deposit/initiate-gateway', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-Idempotency-Key': idemKey,
+            ...headers,
           },
           body: JSON.stringify({
             userId: currentUser.id,
@@ -1920,6 +2458,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return false;
         }
 
+        if (data.deposit?.id) {
+          setDoc(doc(db, 'deposits', data.deposit.id), data.deposit).catch(() => {});
+        }
+        if (data.ledgerEntry?.id) {
+          setDoc(doc(db, 'transactions', data.ledgerEntry.id), data.ledgerEntry).catch(() => {});
+        }
+
         if (data.idempotentReplay) {
           addToast(
             'Duplicate Click Prevented',
@@ -1941,6 +2486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           headers: {
             'Content-Type': 'application/json',
             'X-Idempotency-Key': idemKey,
+            ...headers,
           },
           body: JSON.stringify({
             userId: currentUser.id,
@@ -1963,6 +2509,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             'error'
           );
           return false;
+        }
+
+        if (data.deposit?.id) {
+          const safeDep = { ...data.deposit };
+          delete safeDep.screenshotUrl;
+          setDoc(doc(db, 'deposits', data.deposit.id), safeDep).catch(() => {});
+        }
+        if (data.ledgerEntry?.id) {
+          setDoc(doc(db, 'transactions', data.ledgerEntry.id), data.ledgerEntry).catch(() => {});
         }
 
         if (data.idempotentReplay) {
@@ -2021,15 +2576,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
+    if (!params.authConfirmCode || params.authConfirmCode.trim().length < 4) {
+      addToast(
+        'Security Confirmation Required',
+        'Please enter your 6-digit security PIN or account password to confirm withdrawal.',
+        'error'
+      );
+      return false;
+    }
+
     const idemKey =
       params.idempotencyKey || `IDEM-WTH-${currentUser.id}-${amount}-${Date.now()}`;
 
     try {
+      const headers = await getBackendAuthHeaders();
       const res = await fetch('/api/wallet/withdraw', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Idempotency-Key': idemKey,
+          ...headers,
         },
         body: JSON.stringify({
           userId: currentUser.id,
@@ -2039,7 +2605,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           walletSource: params.walletSource,
           receiverNumber: cleanReceiver,
           amountBdt: amount,
-          authConfirmCode: params.authConfirmCode || '123456',
+          authConfirmCode: params.authConfirmCode,
           idempotencyKey: idemKey,
         }),
       });
@@ -2053,6 +2619,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           'error'
         );
         return false;
+      }
+
+      if (data.withdrawal?.id) {
+        setDoc(doc(db, 'withdrawals', data.withdrawal.id), data.withdrawal).catch(() => {});
+      }
+      if (data.ledgerEntry?.id) {
+        setDoc(doc(db, 'transactions', data.ledgerEntry.id), data.ledgerEntry).catch(() => {});
       }
 
       if (data.idempotentReplay) {
@@ -2086,9 +2659,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): Promise<boolean> => {
     if (!currentUser) return false;
     try {
+      const headers = await getBackendAuthHeaders();
       const res = await fetch('/api/wallet/cancel-request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
           userId: currentUser.id,
           requestType,
@@ -2100,6 +2674,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!res.ok || !data.ok) {
         addToast('Cancellation Failed', data?.error || 'Could not cancel request.', 'error');
         return false;
+      }
+      if (requestType === 'deposit' && data.deposit?.id) {
+        updateDoc(doc(db, 'deposits', data.deposit.id), {
+          status: 'Rejected',
+          adminReason: data.deposit.adminReason || 'Cancelled by user before verification',
+        }).catch(() => {});
+      }
+      if (requestType === 'withdraw' && data.withdrawal?.id) {
+        updateDoc(doc(db, 'withdrawals', data.withdrawal.id), {
+          status: 'Rejected',
+          adminReason: data.withdrawal.adminReason || 'Cancelled by user',
+        }).catch(() => {});
       }
       addToast(
         requestType === 'withdraw'
@@ -2132,21 +2718,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    fetch('/api/wallet/transfer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: currentUser.id,
-        fromWallet: from,
-        amountBdt: amount,
-      }),
-    })
+    getBackendAuthHeaders()
+      .then((headers) =>
+        fetch('/api/wallet/transfer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({
+            userId: currentUser.id,
+            fromWallet: from,
+            amountBdt: amount,
+          }),
+        })
+      )
       .then(async (res) => {
         const data = await res.json();
         await refreshWalletFromBackend();
         if (!res.ok || !data.ok) {
           addToast('Transfer Failed', data?.error || 'Could not transfer balance.', 'error');
           return;
+        }
+        if (data.debitEntry?.id) {
+          setDoc(doc(db, 'transactions', data.debitEntry.id), data.debitEntry).catch(() => {});
+        }
+        if (data.creditEntry?.id) {
+          setDoc(doc(db, 'transactions', data.creditEntry.id), data.creditEntry).catch(() => {});
         }
         addToast(
           'Double-Entry Transfer Completed',
@@ -2199,17 +2794,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cleanMessage = sanitizeText(ticket.message, 1000);
     if (!cleanSubject || !cleanMessage) return;
 
+    const ticketId = `TCK-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
     const newTicket: SupportTicket = {
       category: ticket.category,
       subject: cleanSubject,
       message: cleanMessage,
-      id: `TCK-${Math.floor(805 + Math.random() * 9000)}`,
+      id: ticketId,
       userId: currentUser.id,
       userName: currentUser.name,
       status: 'Open',
       createdAt: nowStr(),
     };
     setSupportTickets((prev) => [newTicket, ...prev]);
+    setDoc(doc(db, 'support_tickets', ticketId), newTicket).catch(() => {});
     addToast('Support Ticket Opened', `Ticket ${newTicket.id} submitted to moderation.`, 'success');
   };
 
@@ -2240,7 +2837,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ============================================================================
-  // ADMIN MUTATORS (Protected by requireAdmin() + Synced with Firestore)
+  // ADMIN MUTATORS (Protected by requireAdmin() + Synced with Server & Firestore)
   // ============================================================================
   const adminUpdateUser = (userId: string, updates: Partial<User>, auditNote: string) => {
     if (!requireAdmin()) return;
@@ -2252,6 +2849,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...safeUpdates
     } = updates;
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...safeUpdates } : u)));
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'users', userId), {
+        ...safeUpdates,
+        updatedAt: serverTimestamp(),
+      }).catch(() => {});
+    }
     logAdminAction('UPDATE_USER', userId, auditNote);
     addToast('User Updated', `Updated user ${userId} successfully.`, 'success');
   };
@@ -2300,6 +2903,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, banned: nextBanned } : u))
     );
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'users', userId), {
+        banned: nextBanned,
+        updatedAt: serverTimestamp(),
+      }).catch(() => {});
+    }
     logAdminAction(
       nextBanned ? 'BAN_USER' : 'UNBAN_USER',
       `${target.name} (${userId})`,
@@ -2347,11 +2956,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     if (isNew) {
       setPackages((prev) => [sanitizedPkg, ...prev]);
-      logAdminAction('CREATE_PACKAGE', sanitizedPkg.id, `Created package ${sanitizedPkg.title} at ৳${sanitizedPkg.priceBdt}`);
+      logAdminAction(
+        'CREATE_PACKAGE',
+        sanitizedPkg.id,
+        `Created package ${sanitizedPkg.title} at ৳${sanitizedPkg.priceBdt}`
+      );
       addToast('Package Created', `${sanitizedPkg.title} is now live.`, 'success');
     } else {
-      setPackages((prev) => prev.map((item) => (item.id === sanitizedPkg.id ? sanitizedPkg : item)));
-      logAdminAction('UPDATE_PACKAGE', sanitizedPkg.id, `Updated ${sanitizedPkg.title} price to ৳${sanitizedPkg.priceBdt}`);
+      setPackages((prev) =>
+        prev.map((item) => (item.id === sanitizedPkg.id ? sanitizedPkg : item))
+      );
+      logAdminAction(
+        'UPDATE_PACKAGE',
+        sanitizedPkg.id,
+        `Updated ${sanitizedPkg.title} price to ৳${sanitizedPkg.priceBdt}`
+      );
       addToast('Package Saved', `${sanitizedPkg.title} updated live.`, 'success');
     }
     syncCatalogItemToFirestore(
@@ -2377,6 +2996,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!ord || ord.status === status) return;
 
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'orders', orderId), { status }).catch(() => {});
+    }
 
     if (status === 'Cancelled' && ord.status !== 'Cancelled') {
       setUsers((prev) =>
@@ -2384,8 +3006,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           u.id === ord.userId ? { ...u, mainBalance: u.mainBalance + ord.amountBdt } : u
         )
       );
+      const refundTrxId = `TRX-${Date.now()}-RFD`;
       const refundTrx: WalletTransaction = {
-        id: `TRX-${Date.now()}-RFD`,
+        id: refundTrxId,
         userId: ord.userId,
         type: 'Refund',
         amountBdt: ord.amountBdt,
@@ -2397,9 +3020,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: nowStr(),
       };
       setTransactions((prev) => [refundTrx, ...prev]);
+
       fetch('/api/wallet/record-activity', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminSession.sessionToken}`,
+        },
         body: JSON.stringify({
           userId: ord.userId,
           type: 'Refund',
@@ -2443,10 +3070,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     if (isNew) {
       setTournaments((prev) => [sanitizedTrn, ...prev]);
-      logAdminAction('CREATE_TOURNAMENT', sanitizedTrn.id, `Created ${sanitizedTrn.title} (Prize: ৳${sanitizedTrn.prizePool})`);
+      logAdminAction(
+        'CREATE_TOURNAMENT',
+        sanitizedTrn.id,
+        `Created ${sanitizedTrn.title} (Prize: ৳${sanitizedTrn.prizePool})`
+      );
       addToast('Tournament Published', `${sanitizedTrn.title} added to schedule.`, 'success');
     } else {
-      setTournaments((prev) => prev.map((tItem) => (tItem.id === sanitizedTrn.id ? sanitizedTrn : tItem)));
+      setTournaments((prev) =>
+        prev.map((tItem) => (tItem.id === sanitizedTrn.id ? sanitizedTrn : tItem))
+      );
       logAdminAction('UPDATE_TOURNAMENT', sanitizedTrn.id, `Updated tournament ${sanitizedTrn.title}`);
       addToast('Tournament Updated', `${sanitizedTrn.title} details saved.`, 'success');
     }
@@ -2466,11 +3099,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     fetch(`/api/tournaments/${encodeURIComponent(trnId)}/credentials`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isAdmin: true, roomId: cleanRoomId, roomPassword: cleanRoomPass }),
-    }).catch(() => {
-      // Non-blocking vault update
-    });
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminSession.sessionToken}`,
+      },
+      body: JSON.stringify({ roomId: cleanRoomId, roomPassword: cleanRoomPass }),
+    }).catch(() => {});
 
     setTournaments((prev) =>
       prev.map((tItem) =>
@@ -2482,14 +3116,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       trnId,
       `Updated Room ID: ${cleanRoomId} for registered players`
     );
-    addToast('Room Credentials Updated', `Room ID ${cleanRoomId} distributed to registered players.`, 'success');
+    addToast(
+      'Room Credentials Updated',
+      `Room ID ${cleanRoomId} distributed to registered players.`,
+      'success'
+    );
   };
 
   const adminAnnounceTournamentWinner = (trnId: string, winnerUserId: string) => {
     if (!requireAdmin()) return;
     const trn = tournaments.find((tItem) => tItem.id === trnId);
-    const winner = users.find((u) => u.id === winnerUserId);
-    if (!trn || !winner || trn.status === 'Completed') return;
+    const registeredMatch = trn?.registeredPlayers.find((p) => p.userId === winnerUserId);
+    const winnerUser = users.find((u) => u.id === winnerUserId);
+    if (!trn || (!registeredMatch && !winnerUser) || trn.status === 'Completed') return;
+
+    const winnerName = winnerUser
+      ? `${winnerUser.name} (${winnerUser.ffIgn})`
+      : `${registeredMatch!.userName} (${registeredMatch!.ffIgn})`;
+    const winnerUid = winnerUser?.ffUid || registeredMatch?.ffUid || '';
 
     setTournaments((prev) =>
       prev.map((tItem) =>
@@ -2497,29 +3141,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ? {
               ...tItem,
               status: 'Completed',
-              winnerName: `${winner.name} (${winner.ffIgn})`,
-              winnerUid: winner.ffUid,
+              winnerName,
+              winnerUid,
             }
           : tItem
       )
     );
 
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === winner.id
-          ? {
-              ...u,
-              incomeBalance: u.incomeBalance + trn.prizePool,
-              totalEarned: u.totalEarned + trn.prizePool,
-              tournamentWins: u.tournamentWins + 1,
-            }
-          : u
-      )
-    );
+    if (winnerUser) {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === winnerUser.id
+            ? {
+                ...u,
+                incomeBalance: u.incomeBalance + trn.prizePool,
+                totalEarned: u.totalEarned + trn.prizePool,
+                tournamentWins: u.tournamentWins + 1,
+              }
+            : u
+        )
+      );
+    }
 
     const prizeTrx: WalletTransaction = {
       id: `TRX-${Date.now()}-PRZ`,
-      userId: winner.id,
+      userId: winnerUserId,
       type: 'Tournament Prize',
       amountBdt: trn.prizePool,
       direction: 'credit',
@@ -2530,11 +3176,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: nowStr(),
     };
     setTransactions((prev) => [prizeTrx, ...prev]);
+
     fetch('/api/wallet/record-activity', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminSession.sessionToken}`,
+      },
       body: JSON.stringify({
-        userId: winner.id,
+        userId: winnerUserId,
         type: 'Tournament Prize',
         direction: 'credit',
         balanceType: 'Income',
@@ -2550,12 +3200,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     logAdminAction(
       'ANNOUNCE_TOURNAMENT_WINNER',
-      `${trn.id} -> ${winner.name}`,
-      `Credited ৳${trn.prizePool} championship prize to ${winner.name} (${winner.ffIgn})`
+      `${trn.id} -> ${winnerName}`,
+      `Credited ৳${trn.prizePool} championship prize to ${winnerName}`
     );
     addToast(
       'Champion Announced & Paid!',
-      `${winner.name} awarded ৳${trn.prizePool} in Income Balance.`,
+      `${winnerName} awarded ৳${trn.prizePool} in Income Balance.`,
       'success'
     );
   };
@@ -2581,10 +3231,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     if (isNew) {
       setTasks((prev) => [sanitizedTask, ...prev]);
-      logAdminAction('CREATE_TASK', sanitizedTask.id, `Published task "${sanitizedTask.title}" (Reward: ৳${sanitizedTask.rewardBdt})`);
+      logAdminAction(
+        'CREATE_TASK',
+        sanitizedTask.id,
+        `Published task "${sanitizedTask.title}" (Reward: ৳${sanitizedTask.rewardBdt})`
+      );
       addToast('Task Created', `${sanitizedTask.title} published.`, 'success');
     } else {
-      setTasks((prev) => prev.map((tItem) => (tItem.id === sanitizedTask.id ? sanitizedTask : tItem)));
+      setTasks((prev) =>
+        prev.map((tItem) => (tItem.id === sanitizedTask.id ? sanitizedTask : tItem))
+      );
       logAdminAction('UPDATE_TASK', sanitizedTask.id, `Updated task "${sanitizedTask.title}"`);
       addToast('Task Updated', `${sanitizedTask.title} saved.`, 'success');
     }
@@ -2619,6 +3275,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         s.id === subId ? { ...s, status: decision, adminReason: cleanReason } : s
       )
     );
+    if (auth.currentUser) {
+      updateDoc(doc(db, 'task_submissions', subId), {
+        status: decision,
+        ...(cleanReason ? { adminReason: cleanReason } : {}),
+      }).catch(() => {});
+    }
 
     if (decision === 'Approved') {
       setUsers((prev) =>
@@ -2652,9 +3314,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: nowStr(),
       };
       setTransactions((prev) => [rewardTrx, ...prev]);
+
       fetch('/api/wallet/record-activity', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminSession.sessionToken}`,
+        },
         body: JSON.stringify({
           userId: sub.userId,
           type: 'Task Reward',
@@ -2680,7 +3346,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Submission ${decision}`,
       decision === 'Approved'
         ? `Credited ৳${sub.rewardBdt} to ${sub.userName}'s Income Balance.`
-        : `Submission rejected.`,
+        : 'Submission rejected.',
       decision === 'Approved' ? 'success' : 'warning'
     );
   };
@@ -2778,14 +3444,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const adminUpdatePaymentSettings = (settings: PaymentSettings) => {
     if (!requireAdmin()) return;
-    setPaymentSettings(settings);
+    const sanitizedSettings: PaymentSettings = {
+      ...settings,
+      gateways: settings.gateways.filter((g) => (g.id as string) !== 'card'),
+    };
+    setPaymentSettings(sanitizedSettings);
     fetch('/api/admin/wallet/settings', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${adminSession.sessionToken}`,
       },
-      body: JSON.stringify(settings),
+      body: JSON.stringify(sanitizedSettings),
     })
       .then(async (res) => {
         const data = await res.json();
@@ -2840,7 +3510,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('Inquiry Resolved', `Message ${msgId} marked as resolved.`, 'success');
   };
 
-  // Validate all public URLs & persist PublicSettings live to Firestore /settings/public
   const adminUpdateSiteSettings = async (settings: SiteSettings): Promise<boolean> => {
     if (!requireAdmin()) return false;
 
@@ -2849,9 +3518,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const validFbUrl = sanitizeSafeUrl(settings.facebookUrl);
     const validTgUrl = sanitizeSafeUrl(settings.telegramUrl);
     const validWaUrl = sanitizeSafeUrl(settings.whatsappUrl);
-    const validLogoUrl = settings.logoUrl?.trim()
-      ? sanitizeSafeUrl(settings.logoUrl)
-      : '';
+    const validLogoUrl = settings.logoUrl?.trim() ? sanitizeSafeUrl(settings.logoUrl) : '';
 
     if (!validSiteUrl || !validMapUrl || !validFbUrl || !validTgUrl || !validWaUrl) {
       addToast(
@@ -2948,14 +3615,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLanguage,
         t,
         theme,
+        themePreference,
         toggleTheme,
         setTheme,
         globalSearch,
         setGlobalSearch,
+        authReady,
         currentUser,
+        pendingGoogleRegistration,
         users,
         login,
+        signInWithGoogle,
+        completeGoogleRegistration,
+        cancelGoogleRegistration,
         register,
+        sendPasswordReset,
         logout,
         updateProfile,
         changePassword,

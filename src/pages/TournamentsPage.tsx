@@ -18,9 +18,21 @@ export const TournamentsPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<'All' | 'Free' | 'Paid'>('All');
 
   const [selectedTrn, setSelectedTrn] = useState<Tournament | null>(null);
-  const [regIgn, setRegIgn] = useState(currentUser?.ffIgn || 'BD_TAHSIN_99');
-  const [regUid, setRegUid] = useState(currentUser?.ffUid || '2849103842');
-  const [regTeam, setRegTeam] = useState('Banani Strikers');
+  const [regIgn, setRegIgn] = useState(currentUser?.ffIgn || '');
+  const [regUid, setRegUid] = useState(currentUser?.ffUid || '');
+  const [regTeam, setRegTeam] = useState('');
+
+  const handleOpenJoinModal = (trn: Tournament) => {
+    if (!currentUser) {
+      addToast('Sign In Required', 'Please sign in or register to join a tournament.', 'warning');
+      navigate('login');
+      return;
+    }
+    setRegIgn(currentUser.ffIgn || '');
+    setRegUid(currentUser.ffUid || '');
+    setRegTeam('');
+    setSelectedTrn(trn);
+  };
 
   const filtered = tournaments.filter((trn) => {
     if (modeFilter !== 'All' && trn.mode !== modeFilter) return false;
@@ -286,7 +298,7 @@ export const TournamentsPage: React.FC = () => {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setSelectedTrn(trn)}
+                      onClick={() => handleOpenJoinModal(trn)}
                       className="h-[38px] px-4 rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold transition-colors"
                     >
                       Join Match ({trn.entryFee === 0 ? 'Free' : `৳${trn.entryFee}`})
@@ -326,36 +338,45 @@ export const TournamentsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Free Fire In-Game Name (IGN)</label>
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
+                Free Fire In-Game Name (IGN)
+              </label>
               <input
                 type="text"
                 required
                 value={regIgn}
                 onChange={(e) => setRegIgn(e.target.value)}
-                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+                placeholder="Enter your Free Fire IGN"
+                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Free Fire Numeric UID</label>
+              <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
+                Free Fire Numeric UID
+              </label>
               <input
                 type="text"
                 required
                 value={regUid}
-                onChange={(e) => setRegUid(e.target.value)}
-                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+                onChange={(e) => setRegUid(e.target.value.replace(/\D/g, ''))}
+                placeholder="Enter your numeric Player UID"
+                className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
               />
             </div>
 
             {selectedTrn.mode !== 'Solo' && (
               <div>
-                <label className="block text-xs font-medium mb-1">Squad / Duo Team Name</label>
+                <label className="block text-xs font-medium text-[#111827] dark:text-gray-200 mb-1">
+                  Squad / Duo Team Name
+                </label>
                 <input
                   type="text"
                   required
                   value={regTeam}
                   onChange={(e) => setRegTeam(e.target.value)}
-                  className="w-full h-[40px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+                  placeholder="Enter squad or duo team name"
+                  className="w-full h-[40px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
                 />
               </div>
             )}

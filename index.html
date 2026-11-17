@@ -67,20 +67,42 @@
         }
       }
     </script>
-    <!-- Early Theme Sync from localStorage -->
+    <!-- Early Theme Sync (light / dark / system) & Legacy Session Cleanup -->
     <script>
       (function () {
         try {
-          var storedTheme = localStorage.getItem('theme');
-          if (!storedTheme) {
-            var appTheme = localStorage.getItem('h41fftopup_app_state_v2_theme');
-            if (appTheme) storedTheme = JSON.parse(appTheme);
+          // Purge any legacy demo session/user storage keys synchronously before React boots
+          var legacyPrefixes = [
+            'h41fftopup_app_state_v2_currentUserId',
+            'h41fftopup_app_state_v2_users',
+            'h41fftopup_app_state_v2_orders',
+            'h41fftopup_app_state_v2_deposits',
+            'h41fftopup_app_state_v2_withdrawals',
+            'h41fftopup_app_state_v2_transactions',
+            'h41fftopup_app_state_v2_taskSubmissions',
+            'h41fftopup_app_state_v2_supportTickets',
+          ];
+          for (var i = 0; i < legacyPrefixes.length; i++) {
+            localStorage.removeItem(legacyPrefixes[i]);
           }
-          var resolved = storedTheme === 'dark' ? 'dark' : 'light';
+
+          var rawPref =
+            localStorage.getItem('h41fftopup_theme') ||
+            localStorage.getItem('theme') ||
+            'system';
+          var pref =
+            rawPref === 'light' || rawPref === 'dark' || rawPref === 'system'
+              ? rawPref
+              : 'system';
+          var prefersDark =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var resolved = pref === 'system' ? (prefersDark ? 'dark' : 'light') : pref;
+
           var root = document.documentElement;
           root.classList.remove('light', 'dark');
           root.classList.add(resolved);
           root.setAttribute('data-theme', resolved);
+          root.setAttribute('data-theme-pref', pref);
           root.style.colorScheme = resolved;
         } catch (e) {}
       })();

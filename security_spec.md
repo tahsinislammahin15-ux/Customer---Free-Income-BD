@@ -8,6 +8,7 @@
    - Existence of a verified admin record at `/databases/$(database)/documents/admins/$(request.auth.uid)`.
 4. **Validated Public URLs**: `/settings/public` is publicly readable (`get`), but writes (`create`, `update`) require `isAdmin()`, strict key allowlisting (`hasOnly`), string length bounds, `^https?://.+` regex checks on all 5 URLs (`siteUrl`, `mapEmbedUrl`, `facebookUrl`, `telegramUrl`, `whatsappUrl`), and server timestamp integrity (`updatedAt == request.time`).
 5. **Immutable Audit Logs**: `/audit_logs/{logId}` allows `create` and `read` only by `isAdmin()`, and strictly forbids `update` and `delete` (`allow update, delete: if false`) so audit history can never be tampered with.
+6. **Strict Owner-Only User Isolation**: `/users/{userId}`, `/orders/{orderId}`, `/deposits/{depositId}`, `/withdrawals/{withdrawId}`, `/transactions/{trxId}`, `/task_submissions/{subId}`, and `/support_tickets/{ticketId}` strictly isolate reads and writes to `request.auth.uid == userId` / `resource.data.userId == request.auth.uid` (or `isAdmin()`). New user profiles must initialize with `role: 'user'`, `banned: false`, and zero balances; users can update only safe profile fields (`name`, `phone`, `ffUid`, `ffIgn`, `photoURL`, `profileCompleted`, `updatedAt`) and can never elevate roles or balances.
 
 ---
 

@@ -45,8 +45,8 @@
     --border-hairline: #1F2937;
     --border-strong: #374151;
     --text-primary: #F9FAFB;
-    --text-secondary: #9CA3AF;
-    --text-muted: #6B7280;
+    --text-secondary: #CBD5E1;
+    --text-muted: #9CA3AF;
     --brand-glow: rgba(255, 107, 0, 0.24);
   }
 
@@ -64,6 +64,10 @@
     background-color: var(--bg-canvas);
     color: var(--text-primary);
     line-height: 1.5;
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      border-color 180ms ease;
   }
 
   h1,
@@ -86,7 +90,9 @@
   textarea {
     transition:
       border-color 150ms ease,
-      box-shadow 150ms ease;
+      box-shadow 150ms ease,
+      background-color 150ms ease,
+      color 150ms ease;
   }
 
   input:not([type="range"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):focus,
@@ -95,6 +101,13 @@
     outline: none;
     border-color: #3B0A0A !important;
     box-shadow: 0 0 0 3px rgba(59, 10, 10, 0.12);
+  }
+
+  .dark input:not([type="range"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):focus,
+  .dark select:focus,
+  .dark textarea:focus {
+    border-color: #FF5500 !important;
+    box-shadow: 0 0 0 3px rgba(255, 85, 0, 0.18);
   }
 }
 

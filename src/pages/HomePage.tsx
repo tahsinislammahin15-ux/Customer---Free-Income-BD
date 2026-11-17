@@ -168,79 +168,10 @@ const REFERENCE_PRODUCT_GROUPS: CatalogProductGroup[] = [
   },
 ];
 
-const REFERENCE_LATEST_ORDERS = [
-  { id: 'ro-1', name: 'Tuhin Miaa', time: '9:54 PM 16 November', item: 'Weekly 💎 - 158 tk', color: '#00897B', initial: 'T' },
-  { id: 'ro-2', name: 'ABDUR RAHMAN', time: '9:48 PM 16 November', item: '2x Weekly Lite 💎 - 82 tk', color: '#3949AB', initial: 'A' },
-  { id: 'ro-3', name: 'JOYNTO', time: '9:46 PM 16 November', item: 'Weekly 💎 - 158 tk', color: '#43A047', initial: 'J' },
-  { id: 'ro-4', name: 'Masud YT', time: '9:45 PM 16 November', item: '115 Diamond 💎 - 79 tk', color: '#C2185B', initial: 'M' },
-  { id: 'ro-5', name: 'Masud YT', time: '9:44 PM 16 November', item: 'Weekly 💎 - 158 tk', color: '#C2185B', initial: 'M' },
-  { id: 'ro-6', name: 'Md Atik', time: '9:44 PM 16 November', item: 'Weekly Lite 💎 - 41 tk', color: '#1E88E5', initial: 'M' },
-  { id: 'ro-7', name: 'Apon Khan', time: '9:43 PM 16 November', item: '25 Diamond 💎 - 22 tk', color: '#D81B60', initial: 'A' },
-  { id: 'ro-8', name: 'Adnan Hossain', time: '9:39 PM 16 November', item: 'Monthly 💎 - 790 tk', color: '#00ACC1', initial: 'A' },
-  { id: 'ro-9', name: 'Abir Hossain', time: '9:39 PM 16 November', item: 'Weekly 💎 - 158 tk', color: '#5E35B1', initial: 'A' },
-  { id: 'ro-10', name: 'jihad Mia', time: '9:34 PM 16 November', item: 'Weekly 💎 - 158 tk', color: '#8E24AA', initial: 'j' },
-];
-
-const LEADERBOARD_DATA = {
-  lifetime: {
-    podium: [
-      { rank: 2, name: 'Prince Gaming', tier: 'Grand Master', spend: '৳163,620', initial: 'P', color: '#64748B' },
-      { rank: 1, name: 'mrkinges', tier: 'Grand Master', spend: '৳192,210', initial: 'm', color: '#FF5500' },
-      { rank: 3, name: 'FAHIM AL HASAN FF', tier: 'Grand Master', spend: '৳131,444', initial: 'F', color: '#B45309' },
-    ],
-    list: [
-      { rank: 4, name: 'Zisan Vai YT', tier: 'Heroic', spend: '৳120,765', initial: 'Z', color: '#15803D' },
-      { rank: 5, name: 'Niloy Paul', tier: 'Heroic', spend: '৳94,100', initial: 'N', color: '#7E22CE' },
-      { rank: 6, name: 'Habibur-Rahman 2205', tier: 'Heroic', spend: '৳76,792', initial: 'H', color: '#BE185D' },
-      { rank: 7, name: 'Bastob Kolpona', tier: 'Heroic', spend: '৳62,044', initial: 'B', color: '#0369A1' },
-      { rank: 8, name: 'Arefin Meraz', tier: 'Master', spend: '৳54,765', initial: 'A', color: '#4338CA' },
-      { rank: 9, name: 'Its Angon', tier: 'Master', spend: '৳54,314', initial: 'I', color: '#0F766E' },
-      { rank: 10, name: 'May Miraz', tier: 'Master', spend: '৳54,225', initial: 'M', color: '#B91C1C' },
-      { rank: 11, name: 'ON RFFF', tier: 'Master', spend: '৳50,701', initial: 'O', color: '#1E293B' },
-      { rank: 12, name: 'Abir Hasan', tier: 'Master', spend: '৳50,660', initial: 'A', color: '#7E22CE' },
-      { rank: 13, name: 'Iasin Arafat', tier: 'Master', spend: '৳50,333', initial: 'I', color: '#C2410C' },
-      { rank: 14, name: 'Saidul Alam', tier: 'Master', spend: '৳46,009', initial: 'S', color: '#0284C7' },
-      { rank: 15, name: 'ARMAN BHAI', tier: 'Master', spend: '৳44,602', initial: 'A', color: '#15803D' },
-      { rank: 16, name: 'Samin Islam', tier: 'Master', spend: '৳43,671', initial: 'S', color: '#6D28D9' },
-      { rank: 17, name: 'Md Saiful', tier: 'Master', spend: '৳43,482', initial: 'M', color: '#B45309' },
-      { rank: 18, name: 'Free Fire 1', tier: 'Master', spend: '৳39,715', initial: 'F', color: '#E11D48' },
-      { rank: 19, name: 'Md Sayed', tier: 'Master', spend: '৳38,837', initial: 'M', color: '#0D9488' },
-      { rank: 20, name: 'Naeemul Islam', tier: 'Master', spend: '৳38,486', initial: 'N', color: '#4F46E5' },
-    ],
-  },
-  monthly: {
-    podium: [
-      { rank: 2, name: 'FAHIM AL HASAN FF', tier: 'Master', spend: '৳59,610', initial: 'F', color: '#64748B' },
-      { rank: 1, name: 'Prince Gaming', tier: 'Grand Master', spend: '৳100,280', initial: 'P', color: '#FF5500' },
-      { rank: 3, name: 'Bastob Kolpona', tier: 'Heroic', spend: '৳45,392', initial: 'B', color: '#B45309' },
-    ],
-    list: [
-      { rank: 4, name: 'mrkinges', tier: 'Heroic', spend: '৳41,200', initial: 'm', color: '#EA580C' },
-      { rank: 5, name: 'Zisan Vai YT', tier: 'Heroic', spend: '৳36,450', initial: 'Z', color: '#15803D' },
-      { rank: 6, name: 'Niloy Paul', tier: 'Master', spend: '৳29,800', initial: 'N', color: '#7E22CE' },
-      { rank: 7, name: 'Habibur-Rahman 2205', tier: 'Master', spend: '৳24,110', initial: 'H', color: '#BE185D' },
-      { rank: 8, name: 'Arefin Meraz', tier: 'Master', spend: '৳21,900', initial: 'A', color: '#4338CA' },
-    ],
-  },
-  weekly: {
-    podium: [
-      { rank: 2, name: 'mirajhossen', tier: 'Diamond', spend: '৳19,618', initial: 'm', color: '#64748B' },
-      { rank: 1, name: 'Noman Hossain', tier: 'Diamond', spend: '৳23,438', initial: 'N', color: '#15803D' },
-      { rank: 3, name: 'Prince Gaming', tier: 'Diamond', spend: '৳17,450', initial: 'P', color: '#B45309' },
-    ],
-    list: [
-      { rank: 4, name: 'FAHIM AL HASAN FF', tier: 'Diamond', spend: '৳14,920', initial: 'F', color: '#B45309' },
-      { rank: 5, name: 'Masud YT', tier: 'Diamond', spend: '৳12,300', initial: 'M', color: '#C2185B' },
-      { rank: 6, name: 'ABDUR RAHMAN', tier: 'Diamond', spend: '৳10,840', initial: 'A', color: '#3949AB' },
-      { rank: 7, name: 'Adnan Hossain', tier: 'Diamond', spend: '৳9,510', initial: 'A', color: '#00ACC1' },
-      { rank: 8, name: 'JOYNTO', tier: 'Diamond', spend: '৳8,190', initial: 'J', color: '#43A047' },
-    ],
-  },
-};
-
 export const HomePage: React.FC = () => {
   const {
     language,
+    users,
     orders,
     tournaments,
     tasks,
@@ -309,6 +240,14 @@ export const HomePage: React.FC = () => {
   ];
 
   useEffect(() => {
+    if (currentUser?.ffUid) {
+      setPlayerUid((prev) => prev || currentUser.ffUid);
+    } else if (!currentUser) {
+      setCheckedPlayerName(null);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % bannerSlides.length);
     }, 4500);
@@ -355,8 +294,12 @@ export const HomePage: React.FC = () => {
       addToast('Stock Out', 'এই প্যাকেজটি বর্তমানে স্টকে নেই। অন্য প্যাকেজ সিলেক্ট করুন।', 'error');
       return;
     }
-    const targetUid = playerUid.trim() || currentUser?.ffUid || '2849103842';
-    const targetIgn = checkedPlayerName || currentUser?.ffIgn || 'BD_PLAYER';
+    const targetUid = playerUid.trim() || currentUser?.ffUid || '';
+    if (targetUid.length < 6) {
+      addToast('Player ID প্রয়োজন', 'অনুগ্রহ করে সঠিক Free Fire Player ID লিখুন।', 'warning');
+      return;
+    }
+    const targetIgn = checkedPlayerName || currentUser?.ffIgn || 'BD Player';
 
     const syntheticPkg: DiamondPackage = {
       id: selectedRechargeItem.id.toUpperCase(),
@@ -383,29 +326,83 @@ export const HomePage: React.FC = () => {
     }
   };
 
-  const activeGateways = paymentSettings.gateways.filter((g) => g.active);
+  const activeGateways = paymentSettings.gateways.filter(
+    (g) => g.active && (g.id as string) !== 'card'
+  );
   const currentGatewayConfig =
     activeGateways.find((g) => g.id === selectedGateway) || activeGateways[0];
 
   const bdServerGroups = REFERENCE_PRODUCT_GROUPS.filter((g) => g.server === 'BD');
 
-  // Combine live orders with the 10 reference recent orders so new orders appear at the top immediately
-  const combinedLatestOrders = [
-    ...orders.slice(0, 3).map((o, idx) => ({
-      id: o.id,
-      name: o.userName || o.playerIgn || 'BD Player',
-      time: o.createdAt || 'Just now',
-      item: `${o.packageTitle.replace(/\s*\(.*?\)/g, '')} 💎 - ${o.amountBdt} tk`,
-      color: idx % 2 === 0 ? '#C2185B' : '#00897B',
-      initial: (o.userName || 'P').charAt(0).toUpperCase(),
-    })),
-    ...REFERENCE_LATEST_ORDERS,
-  ].slice(0, 10);
+  const latestOrdersList = orders.slice(0, 10).map((o, idx) => ({
+    id: o.id,
+    name: o.userName || o.playerIgn || 'BD Player',
+    time: o.createdAt || 'Just now',
+    item: `${o.packageTitle.replace(/\s*\(.*?\)/g, '')} 💎 - ${o.amountBdt} tk`,
+    color: ['#00897B', '#3949AB', '#C2185B', '#1E88E5', '#8E24AA'][idx % 5],
+    initial: (o.userName || o.playerIgn || 'P').charAt(0).toUpperCase(),
+    status: o.status,
+  }));
 
-  const activeLeaderboard = LEADERBOARD_DATA[leaderboardTab];
+  const paletteColors = ['#FF5500', '#0D3B66', '#15803D', '#7E22CE', '#C2185B', '#0284C7'];
+  const getTierName = (spend: number) => {
+    if (spend >= 50000) return 'Grand Master';
+    if (spend >= 20000) return 'Heroic';
+    if (spend >= 5000) return 'Master';
+    return 'Diamond';
+  };
+
+  const nowMs = Date.now();
+  const windowDays = leaderboardTab === 'weekly' ? 7 : leaderboardTab === 'monthly' ? 30 : 36500;
+  const spendByUser = new Map<string, { id: string; name: string; spend: number }>();
+
+  for (const u of users) {
+    spendByUser.set(u.id, {
+      id: u.id,
+      name: u.name || u.ffIgn || 'Player',
+      spend: 0,
+    });
+  }
+
+  for (const o of orders) {
+    if (o.status !== 'Completed') continue;
+    if (leaderboardTab !== 'lifetime') {
+      const parsed = Date.parse(o.createdAt);
+      if (!Number.isNaN(parsed) && nowMs - parsed > windowDays * 86400000) {
+        continue;
+      }
+    }
+    const existing = spendByUser.get(o.userId);
+    if (existing) {
+      existing.spend += o.amountBdt;
+    } else {
+      spendByUser.set(o.userId, {
+        id: o.userId,
+        name: o.userName || o.playerIgn || 'Player',
+        spend: o.amountBdt,
+      });
+    }
+  }
+
+  const rankedRealPlayers = Array.from(spendByUser.values())
+    .filter((entry) => entry.spend > 0)
+    .sort((a, b) => b.spend - a.spend)
+    .map((entry, idx) => ({
+      rank: idx + 1,
+      name: entry.name,
+      tier: getTierName(entry.spend),
+      spend: `৳${entry.spend.toLocaleString()}`,
+      initial: entry.name.charAt(0).toUpperCase(),
+      color: paletteColors[idx % paletteColors.length],
+    }));
+
+  const podiumOrdered = [rankedRealPlayers[1], rankedRealPlayers[0], rankedRealPlayers[2]].filter(
+    (item): item is NonNullable<typeof item> => Boolean(item)
+  );
+  const leaderboardList = rankedRealPlayers.slice(3);
   const visibleLeaderboardRows = showAllRanked
-    ? activeLeaderboard.list
-    : activeLeaderboard.list.slice(0, 10);
+    ? leaderboardList
+    : leaderboardList.slice(0, 10);
 
   /* ===========================================================================
      IF A GAME CARD IS CLICKED: RENDER EXACT PRODUCT TOP-UP VIEW (02:03 - 03:35)
@@ -702,7 +699,7 @@ export const HomePage: React.FC = () => {
                   value={trxId}
                   onChange={(e) => setTrxId(e.target.value)}
                   placeholder="Transaction ID (অথবা খালি রাখলে অটো গেটওয়ে)"
-                  className="w-full h-10 px-3 rounded-lg bg-white dark:bg-[#161F30] border border-gray-200 dark:border-gray-700 text-xs font-mono"
+                  className="w-full h-10 px-3 rounded-lg bg-white dark:bg-[#161F30] border border-gray-200 dark:border-gray-700 text-xs font-mono text-[#111827] dark:text-white placeholder:text-gray-400"
                 />
               </div>
             )}
@@ -759,6 +756,11 @@ export const HomePage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   if (!selectedRechargeItem) return;
+                  const cartUid = playerUid.trim() || currentUser?.ffUid || '';
+                  if (cartUid.length < 6) {
+                    addToast('Player ID প্রয়োজন', 'কার্টে যোগ করার আগে সঠিক Free Fire Player ID লিখুন।', 'warning');
+                    return;
+                  }
                   const syntheticPkg: DiamondPackage = {
                     id: selectedRechargeItem.id.toUpperCase(),
                     title: `${selectedRechargeItem.name} (${activeProductGroup.title})`,
@@ -771,8 +773,8 @@ export const HomePage: React.FC = () => {
                   };
                   addToCart(
                     syntheticPkg,
-                    playerUid.trim() || currentUser?.ffUid || '2849103842',
-                    checkedPlayerName || currentUser?.ffIgn || 'BD_PLAYER'
+                    cartUid,
+                    checkedPlayerName || currentUser?.ffIgn || 'BD Player'
                   );
                   setIsCartOpen(true);
                 }}
@@ -1076,38 +1078,61 @@ export const HomePage: React.FC = () => {
         </div>
 
         <div className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111827] p-3 sm:p-5 shadow-xs space-y-2.5">
-          {combinedLatestOrders.map((ord) => (
-            <div
-              key={ord.id}
-              className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#161F30] px-3 sm:px-4 py-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex items-center justify-between gap-2.5"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white font-display font-bold text-sm flex items-center justify-center shrink-0 shadow-xs"
-                  style={{ backgroundColor: ord.color }}
-                >
-                  {ord.initial}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-display font-extrabold text-xs sm:text-sm text-[#111827] dark:text-white truncate">
-                      {ord.name}
-                    </span>
-                    <span className="text-[10px] sm:text-[11px] text-gray-400 font-mono">
-                      {ord.time}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300 font-medium truncate mt-0.5">
-                    {ord.item}
-                  </div>
-                </div>
+          {latestOrdersList.length === 0 ? (
+            <div className="py-8 text-center space-y-2">
+              <div className="text-sm font-bold text-[#111827] dark:text-white">
+                {language === 'bn'
+                  ? 'এখনো কোনো টপ-আপ অর্ডার পাওয়া যায়নি'
+                  : 'No recent top-up orders yet'}
               </div>
-
-              <span className="px-3 py-1 rounded-full bg-[#00C853] text-white text-[10px] font-extrabold uppercase tracking-wider shrink-0 shadow-xs">
-                COMPLETE
-              </span>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {language === 'bn'
+                  ? 'লাইভ অর্ডার ফিডে আপনার ডেলিভারি দেখতে প্রথম অর্ডার সম্পন্ন করুন।'
+                  : 'Live orders appear here in real time as verified players complete top-ups.'}
+              </p>
             </div>
-          ))}
+          ) : (
+            latestOrdersList.map((ord) => (
+              <div
+                key={ord.id}
+                className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#161F30] px-3 sm:px-4 py-2.5 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex items-center justify-between gap-2.5"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white font-display font-bold text-sm flex items-center justify-center shrink-0 shadow-xs"
+                    style={{ backgroundColor: ord.color }}
+                  >
+                    {ord.initial}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="font-display font-extrabold text-xs sm:text-sm text-[#111827] dark:text-white truncate">
+                        {ord.name}
+                      </span>
+                      <span className="text-[10px] sm:text-[11px] text-gray-400 font-mono">
+                        {ord.time}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300 font-medium truncate mt-0.5">
+                      {ord.item}
+                    </div>
+                  </div>
+                </div>
+
+                <span
+                  className={`px-3 py-1 rounded-full text-white text-[10px] font-extrabold uppercase tracking-wider shrink-0 shadow-xs ${
+                    ord.status === 'Completed'
+                      ? 'bg-[#00C853]'
+                      : ord.status === 'Cancelled'
+                      ? 'bg-[#EF4444]'
+                      : 'bg-[#F59E0B]'
+                  }`}
+                >
+                  {ord.status === 'Completed' ? 'COMPLETE' : ord.status.toUpperCase()}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
@@ -1118,7 +1143,7 @@ export const HomePage: React.FC = () => {
         <div className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111827] p-4 sm:p-6 shadow-xs space-y-5">
           {/* Header & Period Switcher */}
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFFBEB] border border-[#FDE68A] text-[#B45309] text-[10px] font-extrabold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFFBEB] dark:bg-amber-500/15 border border-[#FDE68A] dark:border-amber-500/30 text-[#B45309] dark:text-amber-300 text-[10px] font-extrabold uppercase tracking-wider">
               <Crown className="w-3 h-3 fill-current" />
               <span>LEADERBOARD</span>
             </div>
@@ -1128,7 +1153,7 @@ export const HomePage: React.FC = () => {
             </h2>
 
             <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-              Explore the highest spenders. Rankings use the same rank system as your profile.
+              Explore the highest spenders. Rankings use verified order spend tied to real user accounts.
             </p>
 
             {/* WEEKLY | MONTHLY | LIFETIME Pill Switcher */}
@@ -1152,125 +1177,154 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Top 3 Podium (#2 Left, #1 Center with Crown, #3 Right — Matches 00:39) */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 items-end pt-4 pb-2">
-            {activeLeaderboard.podium.map((p) => {
-              const isFirst = p.rank === 1;
-              return (
-                <div
-                  key={p.rank}
-                  className={`flex flex-col items-center text-center ${
-                    isFirst ? '-mt-4' : ''
-                  }`}
-                >
-                  {isFirst && (
-                    <Crown className="w-6 h-6 text-[#F59E0B] fill-[#F59E0B] mb-1 animate-bounce" />
-                  )}
-                  <div className="relative">
-                    <div
-                      className={`${
-                        isFirst ? 'w-16 h-16 sm:w-20 sm:h-20 ring-4 ring-[#F59E0B]/40' : 'w-13 h-13 sm:w-16 sm:h-16 ring-2 ring-gray-300'
-                      } rounded-full flex items-center justify-center text-white font-display font-black text-lg sm:text-2xl shadow-md`}
-                      style={{ backgroundColor: p.color }}
-                    >
-                      {p.initial}
-                    </div>
-                    <span
-                      className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold text-white shadow-xs ${
-                        isFirst
-                          ? 'bg-[#F59E0B]'
-                          : p.rank === 2
-                          ? 'bg-slate-600'
-                          : 'bg-amber-800'
-                      }`}
-                    >
-                      #{p.rank}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 font-display font-extrabold text-xs sm:text-sm text-[#111827] dark:text-white truncate max-w-full px-1">
-                    {p.name}
-                  </div>
-                  <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold flex items-center justify-center gap-1 mt-0.5">
-                    <ShieldCheck className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{p.tier}</span>
-                  </div>
-                  <div
-                    className={`mt-1 font-mono font-extrabold text-xs sm:text-sm ${
-                      isFirst ? 'text-[#D97706]' : 'text-[#E11D48]'
-                    }`}
-                  >
-                    {p.spend}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Leaderboard Table Header */}
-          <div className="px-3 pt-2 flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-4">
-              <span>RANK</span>
-              <span>PLAYER</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <span>TIER</span>
-              <span>SPEND BDT</span>
-            </div>
-          </div>
-
-          {/* Ranked Rows (#4 - #20 — Matches 00:40 - 00:43) */}
-          <div className="space-y-2">
-            {visibleLeaderboardRows.map((row) => (
-              <div
-                key={row.rank}
-                className="rounded-2xl border border-[#FDE68A]/60 dark:border-gray-800 bg-[#FFFDF9] dark:bg-[#161F30] px-3 py-2.5 flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                  <span className="w-6 h-6 rounded-md bg-[#F59E0B] text-white font-mono font-extrabold text-[11px] flex items-center justify-center shrink-0 shadow-2xs">
-                    {row.rank}
-                  </span>
-                  <div
-                    className="w-8 h-8 rounded-full text-white font-display font-bold text-xs flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: row.color }}
-                  >
-                    {row.initial}
-                  </div>
-                  <span className="font-display font-bold text-xs sm:text-sm text-[#111827] dark:text-white truncate">
-                    {row.name}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 sm:gap-5 shrink-0">
-                  <span className="text-xs" title={row.tier}>
-                    🛡️
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full bg-[#FEF3C7] dark:bg-amber-500/15 text-[#B45309] dark:text-amber-300 font-mono font-extrabold text-[11px]">
-                    {row.spend}
-                  </span>
-                </div>
+          {rankedRealPlayers.length === 0 ? (
+            <div className="py-8 text-center space-y-3 border-t border-gray-100 dark:border-gray-800">
+              <div className="text-sm font-bold text-[#111827] dark:text-white">
+                No ranked players yet
               </div>
-            ))}
-          </div>
-
-          {/* Bottom Load More Players Button (Matches 00:43 in Recording) */}
-          <div className="pt-2 text-center space-y-2.5">
-            <div className="text-xs text-gray-500">
-              Showing <strong>{visibleLeaderboardRows.length + 3}</strong> of <strong>100</strong> ranked players
+              <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                Real player rankings update automatically as registered users complete verified top-up orders.
+              </p>
+              <Link
+                to="/topup"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#280606] hover:bg-[#3B0A0A] text-white font-display font-bold text-xs transition-colors"
+              >
+                <span>Go to Top Up</span>
+              </Link>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowAllRanked(!showAllRanked)}
-              className="px-6 py-2.5 rounded-full bg-[#280606] hover:bg-[#3B0A0A] text-white font-display font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors"
-            >
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  showAllRanked ? 'rotate-180' : ''
-                }`}
-              />
-              <span>{showAllRanked ? 'Show Top Players' : 'Load More Players'}</span>
-            </button>
-          </div>
+          ) : (
+            <>
+              {/* Top 3 Podium (#2 Left, #1 Center with Crown, #3 Right) */}
+              {podiumOrdered.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 items-end pt-4 pb-2">
+                  {podiumOrdered.map((p) => {
+                    const isFirst = p.rank === 1;
+                    return (
+                      <div
+                        key={p.rank}
+                        className={`flex flex-col items-center text-center ${
+                          isFirst ? '-mt-4' : ''
+                        }`}
+                      >
+                        {isFirst && (
+                          <Crown className="w-6 h-6 text-[#F59E0B] fill-[#F59E0B] mb-1 animate-bounce" />
+                        )}
+                        <div className="relative">
+                          <div
+                            className={`${
+                              isFirst
+                                ? 'w-16 h-16 sm:w-20 sm:h-20 ring-4 ring-[#F59E0B]/40'
+                                : 'w-13 h-13 sm:w-16 sm:h-16 ring-2 ring-gray-300 dark:ring-gray-700'
+                            } rounded-full flex items-center justify-center text-white font-display font-black text-lg sm:text-2xl shadow-md`}
+                            style={{ backgroundColor: p.color }}
+                          >
+                            {p.initial}
+                          </div>
+                          <span
+                            className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-mono font-extrabold text-white shadow-xs ${
+                              isFirst
+                                ? 'bg-[#F59E0B]'
+                                : p.rank === 2
+                                ? 'bg-slate-600'
+                                : 'bg-amber-800'
+                            }`}
+                          >
+                            #{p.rank}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 font-display font-extrabold text-xs sm:text-sm text-[#111827] dark:text-white truncate max-w-full px-1">
+                          {p.name}
+                        </div>
+                        <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold flex items-center justify-center gap-1 mt-0.5">
+                          <ShieldCheck className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{p.tier}</span>
+                        </div>
+                        <div
+                          className={`mt-1 font-mono font-extrabold text-xs sm:text-sm ${
+                            isFirst ? 'text-[#D97706]' : 'text-[#E11D48] dark:text-[#FB7185]'
+                          }`}
+                        >
+                          {p.spend}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Leaderboard Table Header & Rows (#4+) */}
+              {visibleLeaderboardRows.length > 0 && (
+                <>
+                  <div className="px-3 pt-2 flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-4">
+                      <span>RANK</span>
+                      <span>PLAYER</span>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <span>TIER</span>
+                      <span>SPEND BDT</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {visibleLeaderboardRows.map((row) => (
+                      <div
+                        key={row.rank}
+                        className="rounded-2xl border border-[#FDE68A]/60 dark:border-gray-800 bg-[#FFFDF9] dark:bg-[#161F30] px-3 py-2.5 flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                          <span className="w-6 h-6 rounded-md bg-[#F59E0B] text-white font-mono font-extrabold text-[11px] flex items-center justify-center shrink-0 shadow-2xs">
+                            {row.rank}
+                          </span>
+                          <div
+                            className="w-8 h-8 rounded-full text-white font-display font-bold text-xs flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: row.color }}
+                          >
+                            {row.initial}
+                          </div>
+                          <span className="font-display font-bold text-xs sm:text-sm text-[#111827] dark:text-white truncate">
+                            {row.name}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 sm:gap-5 shrink-0">
+                          <span className="text-xs" title={row.tier}>
+                            🛡️
+                          </span>
+                          <span className="px-2.5 py-1 rounded-full bg-[#FEF3C7] dark:bg-amber-500/15 text-[#B45309] dark:text-amber-300 font-mono font-extrabold text-[11px]">
+                            {row.spend}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Bottom Load More Players Button */}
+              <div className="pt-2 text-center space-y-2.5">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Showing <strong>{Math.min(rankedRealPlayers.length, podiumOrdered.length + visibleLeaderboardRows.length)}</strong> of{' '}
+                  <strong>{rankedRealPlayers.length}</strong> ranked players
+                </div>
+                {leaderboardList.length > 10 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllRanked(!showAllRanked)}
+                    className="px-6 py-2.5 rounded-full bg-[#280606] hover:bg-[#3B0A0A] text-white font-display font-bold text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${
+                        showAllRanked ? 'rotate-180' : ''
+                      }`}
+                    />
+                    <span>{showAllRanked ? 'Show Top Players' : 'Load More Players'}</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </section>
     </div>

@@ -138,12 +138,12 @@ export const SupportChatWidget: React.FC = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about Top Up, Room ID, or Withdraw..."
-              className="flex-1 h-9 px-3 text-xs rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
+              className="flex-1 h-9 px-3 text-xs rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder:text-gray-400 border border-gray-200 dark:border-gray-700"
             />
             <button
               type="submit"
               aria-label="Send message"
-              className="h-9 w-9 rounded-xl bg-[#3B0A0A] text-white flex items-center justify-center shrink-0"
+              className="h-9 w-9 rounded-xl bg-[#3B0A0A] dark:bg-[#FF5500] text-white flex items-center justify-center shrink-0"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -164,7 +164,7 @@ export const SupportChatWidget: React.FC = () => {
         </div>
       ) : (
         <div className="flex flex-col items-end gap-2">
-          {/* Dark Floating Tooltip Pill (Matches 00:26 - 03:45 in Recording) */}
+          {/* Dark Floating Tooltip Pill */}
           {tooltipVisible && (
             <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1C1917] text-white text-[11px] font-bold shadow-lg border border-white/10">
               <button
@@ -187,12 +187,12 @@ export const SupportChatWidget: React.FC = () => {
             </div>
           )}
 
-          {/* White Circular Headset Button (Matches Bottom-Right Button in Recording) */}
+          {/* Circular Headset Button */}
           <button
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Open 24/7 Support"
-            className="w-12 h-12 rounded-full bg-white text-[#111827] border border-gray-200 shadow-[0_6px_20px_rgba(0,0,0,0.18)] flex items-center justify-center hover:scale-105 transition-transform"
+            className="w-12 h-12 rounded-full bg-white dark:bg-[#161F30] text-[#111827] dark:text-white border border-gray-200 dark:border-gray-700 shadow-[0_6px_20px_rgba(0,0,0,0.18)] flex items-center justify-center hover:scale-105 transition-transform"
           >
             <Headphones className="w-5 h-5" />
           </button>

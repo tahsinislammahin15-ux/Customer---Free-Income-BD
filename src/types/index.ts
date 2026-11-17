@@ -24,19 +24,22 @@ export type PageView =
   | 'notfound';
 
 export type Language = 'en' | 'bn';
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface User {
   id: string;
+  uid?: string;
   name: string;
   email: string;
   phone: string;
+  photoURL?: string;
   password?: string;
   role: 'user' | 'admin';
   ffUid: string;
   ffIgn: string;
   verified: boolean;
   banned: boolean;
+  profileCompleted?: boolean;
   mainBalance: number;
   incomeBalance: number;
   bonusBalance: number;
@@ -46,6 +49,8 @@ export interface User {
   totalEarned: number;
   tournamentWins: number;
   joinedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DiamondPackage {
@@ -148,7 +153,7 @@ export interface TaskSubmission {
   submittedAt: string;
 }
 
-export type PaymentGatewayName = 'bkash' | 'nagad' | 'rocket' | 'upay' | 'card';
+export type PaymentGatewayName = 'bkash' | 'nagad' | 'rocket' | 'upay';
 
 export type WalletStatus = 'Pending' | 'Approved' | 'Rejected' | 'Completed' | 'Failed';
 

@@ -16,7 +16,6 @@ import {
   Upload,
   AlertTriangle,
   Clock,
-  CreditCard,
   Image as ImageIcon,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -122,11 +121,11 @@ export const MyAccountPage: React.FC = () => {
                 {currentUser.name}
               </h1>
               <span className="px-2 py-0.5 rounded-full bg-[#00C853] text-white text-[10px] font-extrabold uppercase">
-                UID: {currentUser.ffUid}
+                {currentUser.ffUid ? `UID: ${currentUser.ffUid}` : 'UID Not Set'}
               </span>
             </div>
             <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] font-mono">
-              IGN: {currentUser.ffIgn} · ID: {currentUser.id} · Refs: {currentUser.referralCount}
+              {currentUser.ffIgn ? `IGN: ${currentUser.ffIgn} · ` : ''}Ref: {currentUser.referralCode} · Refs: {currentUser.referralCount}
             </p>
           </div>
         </div>
@@ -156,14 +155,14 @@ export const MyAccountPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('profile')}
-            className="h-[38px] px-3.5 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold"
+            className="h-[38px] px-3.5 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold text-[#111827] dark:text-white"
           >
             Edit Profile
           </button>
           <button
             type="button"
-            onClick={logout}
-            className="col-span-2 sm:col-span-1 h-[38px] px-3.5 rounded-xl bg-[#FEE2E2] text-[#B91C1C] text-xs font-semibold"
+            onClick={() => void logout()}
+            className="col-span-2 sm:col-span-1 h-[38px] px-3.5 rounded-xl bg-[#FEE2E2] dark:bg-red-950/60 text-[#B91C1C] dark:text-red-300 text-xs font-semibold"
           >
             Logout
           </button>
@@ -333,17 +332,21 @@ export const MyAccountPage: React.FC = () => {
           <div className="space-y-2 text-xs">
             <div className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B]">
               <div className="font-bold text-[#111827] dark:text-[#F8FAFC]">
-                Custom Room Active: TRN-501
+                {myTournaments.some((trn) => trn.roomId)
+                  ? `Custom Room Unlocked: ${myTournaments.find((trn) => trn.roomId)?.id}`
+                  : `Top-Up Activity (${myOrders.length} Orders)`}
               </div>
-              <div className="text-[#6B7280] mt-0.5">
-                Room ID <span className="font-mono font-bold">88492014</span> is live for tonight’s 9:00 PM match.
+              <div className="text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                {myTournaments.some((trn) => trn.roomId)
+                  ? `Room ID ${myTournaments.find((trn) => trn.roomId)?.roomId} is available in My Tournament Rooms.`
+                  : `${myOrders.filter((o) => o.status === 'Completed').length} completed · ${myOrders.filter((o) => o.status === 'Pending').length} pending orders.`}
               </div>
             </div>
             <div className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B]">
               <div className="font-bold text-[#111827] dark:text-[#F8FAFC]">
                 Task Submissions ({mySubmissions.length})
               </div>
-              <div className="text-[#6B7280] mt-0.5">
+              <div className="text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
                 {mySubmissions.filter((s) => s.status === 'Pending').length} pending ·{' '}
                 {mySubmissions.filter((s) => s.status === 'Approved').length} approved proofs.
               </div>
@@ -431,9 +434,9 @@ export const UserProfilePage: React.FC = () => {
     );
   }
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({ name, phone, ffUid, ffIgn });
+    await updateProfile({ name, phone, ffUid, ffIgn });
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -497,22 +500,22 @@ export const UserProfilePage: React.FC = () => {
             <input
               type="text"
               inputMode="numeric"
-              required
               maxLength={12}
               value={ffUid}
               onChange={(e) => setFfUid(e.target.value.replace(/\D/g, ''))}
-              className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+              placeholder="Optional 8-12 digit UID"
+              className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
             />
           </div>
           <div>
             <label className="block text-xs font-medium mb-1">In-Game Name (IGN)</label>
             <input
               type="text"
-              required
               maxLength={40}
               value={ffIgn}
               onChange={(e) => setFfIgn(e.target.value)}
-              className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+              placeholder="Optional In-Game Name"
+              className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
             />
           </div>
           <button
@@ -983,12 +986,14 @@ export const DepositPage: React.FC = () => {
     navigate,
   } = useApp();
 
-  const activeGateways = paymentSettings.gateways.filter((g) => g.active);
+  const activeGateways = paymentSettings.gateways.filter(
+    (g) => g.active && (g.id as string) !== 'card'
+  );
   const [selectedMethod, setSelectedMethod] = useState<PaymentGatewayName>(
     activeGateways[0]?.id || 'bkash'
   );
   const [channel, setChannel] = useState<'Manual' | 'Instant Gateway'>('Manual');
-  const [senderNumber, setSenderNumber] = useState(currentUser?.phone || '01712345678');
+  const [senderNumber, setSenderNumber] = useState(currentUser?.phone || '');
   const [transactionId, setTransactionId] = useState('');
   const [amountBdt, setAmountBdt] = useState<number>(200);
   const [screenshotDataUrl, setScreenshotDataUrl] = useState<string>('');
@@ -1061,7 +1066,7 @@ export const DepositPage: React.FC = () => {
     const ok = await createDeposit({
       method: selectedMethod,
       channel,
-      senderNumber: selectedMethod === 'card' ? '432100009999' : senderNumber.trim(),
+      senderNumber: senderNumber.trim(),
       transactionId: autoTrx,
       amountBdt: Number(amountBdt),
       screenshotUrl: screenshotDataUrl || undefined,
@@ -1084,7 +1089,6 @@ export const DepositPage: React.FC = () => {
     nagad: 'bg-[#F7941D] text-white',
     rocket: 'bg-[#8C3494] text-white',
     upay: 'bg-[#00529B] text-white',
-    card: 'bg-[#1A1F71] text-white',
   };
 
   return (
@@ -1159,19 +1163,16 @@ export const DepositPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Gateway Tiles */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {/* Gateway Tiles (4-column aligned MFS options: bKash, Nagad, Rocket, Upay) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {activeGateways.map((gw) => (
               <button
                 key={gw.id}
                 type="button"
-                onClick={() => {
-                  setSelectedMethod(gw.id);
-                  if (gw.id === 'card') setChannel('Instant Gateway');
-                }}
+                onClick={() => setSelectedMethod(gw.id)}
                 className={`p-2.5 rounded-xl border text-center transition-all ${
                   selectedMethod === gw.id
-                    ? 'border-2 border-[#3B0A0A] bg-[#FFF5F5] dark:bg-[#2A0B0B]'
+                    ? 'border-2 border-[#3B0A0A] dark:border-[#FF5500] bg-[#FFF5F5] dark:bg-[#2A0B0B]'
                     : 'border-[#E5E7EB] dark:border-[#1E293B]'
                 }`}
               >
@@ -1182,7 +1183,7 @@ export const DepositPage: React.FC = () => {
                 >
                   {gw.name}
                 </span>
-                <div className="text-[10px] font-mono text-[#6B7280] mt-1 truncate">
+                <div className="text-[10px] font-mono text-[#6B7280] dark:text-[#94A3B8] mt-1 truncate">
                   {gw.merchantNumber}
                 </div>
               </button>
@@ -1196,19 +1197,17 @@ export const DepositPage: React.FC = () => {
                 <span className="font-bold text-[#111827] dark:text-white">
                   {currentGateway.name} Number
                 </span>
-                {selectedMethod !== 'card' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(currentGateway.personalNumber);
-                      addToast('Number Copied', `${currentGateway.personalNumber} copied.`, 'info');
-                    }}
-                    className="text-[#3B0A0A] dark:text-[#FCA5A5] font-mono font-bold inline-flex items-center gap-1"
-                  >
-                    <Copy className="w-3 h-3" />
-                    <span>Copy {currentGateway.personalNumber}</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(currentGateway.personalNumber);
+                    addToast('Number Copied', `${currentGateway.personalNumber} copied.`, 'info');
+                  }}
+                  className="text-[#3B0A0A] dark:text-[#FCA5A5] font-mono font-bold inline-flex items-center gap-1"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Copy {currentGateway.personalNumber}</span>
+                </button>
               </div>
               <p className="text-[11px] text-[#4B5563] dark:text-[#94A3B8]">
                 {currentGateway.instructions}
@@ -1260,21 +1259,19 @@ export const DepositPage: React.FC = () => {
                 className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
               />
             </div>
-            {selectedMethod !== 'card' && (
-              <div>
-                <label className="block text-xs font-medium mb-1">
-                  Sender {selectedMethod.toUpperCase()} Number
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={senderNumber}
-                  onChange={(e) => setSenderNumber(e.target.value)}
-                  placeholder="017XXXXXXXX"
-                  className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-xs font-medium mb-1">
+                Sender {selectedMethod.toUpperCase()} Number
+              </label>
+              <input
+                type="text"
+                required
+                value={senderNumber}
+                onChange={(e) => setSenderNumber(e.target.value)}
+                placeholder="017XXXXXXXX"
+                className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
+              />
+            </div>
           </div>
 
           {channel === 'Manual' ? (
@@ -1444,7 +1441,7 @@ export const WithdrawPage: React.FC = () => {
   } = useApp();
 
   const activeGateways = paymentSettings.gateways.filter(
-    (g) => g.active && g.id !== 'card'
+    (g) => g.active && (g.id as string) !== 'card'
   );
   const [method, setMethod] = useState<PaymentGatewayName>(
     activeGateways[0]?.id || 'bkash'
@@ -1452,9 +1449,9 @@ export const WithdrawPage: React.FC = () => {
   const [walletSource, setWalletSource] = useState<'incomeBalance' | 'mainBalance'>(
     'incomeBalance'
   );
-  const [receiverNumber, setReceiverNumber] = useState(currentUser?.phone || '01712345678');
+  const [receiverNumber, setReceiverNumber] = useState(currentUser?.phone || '');
   const [amountBdt, setAmountBdt] = useState<number>(paymentSettings.minWithdrawBdt || 100);
-  const [authConfirmCode, setAuthConfirmCode] = useState<string>('123456');
+  const [authConfirmCode, setAuthConfirmCode] = useState<string>('');
   const [lastWithdrawIdemKey, setLastWithdrawIdemKey] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -1621,8 +1618,8 @@ export const WithdrawPage: React.FC = () => {
               minLength={4}
               value={authConfirmCode}
               onChange={(e) => setAuthConfirmCode(e.target.value)}
-              placeholder="123456"
-              className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
+              placeholder="Enter security PIN or password"
+              className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] text-[#111827] dark:text-white border border-[#D1D5DB] dark:border-[#1E293B]"
             />
           </div>
 
