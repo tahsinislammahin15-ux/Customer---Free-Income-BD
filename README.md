@@ -1,6 +1,6 @@
-# Free Income BD — Gaming Top Up, Esports & Rewards Platform
+# H41FFTOPUP — Instant Free Fire Top Up, Esports & Rewards Platform
 
-Production-ready multi-page web application for **Free Income BD** (Free Fire UID & UniPin Diamond Top Up, Moderated Esports Tournaments, Verified Task Rewards, BDT Wallet Ledger, and Admin Console).
+Production-ready multi-page web application for **H41FFTOPUP** (Free Fire UID & UniPin Diamond Top Up, Weekly & Monthly VIP Memberships, Moderated Esports Tournaments, Verified Task Rewards, BDT Wallet Ledger, and Admin Console).
 
 ---
 

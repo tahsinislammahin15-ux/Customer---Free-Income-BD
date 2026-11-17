@@ -11,15 +11,15 @@ export const ToastContainer: React.FC = () => {
     <div className="fixed top-20 right-4 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
       {toasts.map((toast) => {
         const iconMap = {
-          success: <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0" />,
-          info: <Info className="w-4 h-4 text-[#2563EB] dark:text-[#60A5FA] shrink-0" />,
+          success: <CheckCircle2 className="w-4 h-4 text-[#00C853] shrink-0" />,
+          info: <Info className="w-4 h-4 text-[#3B0A0A] dark:text-[#FCA5A5] shrink-0" />,
           warning: <AlertTriangle className="w-4 h-4 text-[#F59E0B] shrink-0" />,
           error: <AlertCircle className="w-4 h-4 text-[#EF4444] shrink-0" />,
         };
         return (
           <div
             key={toast.id}
-            className="pointer-events-auto p-3.5 rounded-2xl card-premium shadow-2xl flex items-start justify-between gap-3"
+            className="pointer-events-auto p-3.5 rounded-2xl zvy-card shadow-lg flex items-start justify-between gap-3"
           >
             <div className="flex items-start gap-2.5">
               {iconMap[toast.type]}

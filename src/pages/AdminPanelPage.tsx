@@ -246,7 +246,7 @@ export const AdminPanelPage: React.FC = () => {
   const [trnPrize, setTrnPrize] = useState(3000);
   const [trnTime, setTrnTime] = useState('Tomorrow, 09:00 PM BST');
   const [trnRoomId, setTrnRoomId] = useState('90128834');
-  const [trnRoomPass, setTrnRoomPass] = useState('FIBD');
+  const [trnRoomPass, setTrnRoomPass] = useState('H41FF');
 
   // Task Form State
   const [taskTitle, setTaskTitle] = useState('');
@@ -313,32 +313,32 @@ export const AdminPanelPage: React.FC = () => {
 
     return (
       <div className="max-w-lg mx-auto px-4 py-12 sm:py-16">
-        <div className="p-6 sm:p-8 rounded-2xl card-premium space-y-6 shadow-xl border border-[#2563EB]/30">
-          <div className="flex items-center justify-between gap-3 border-b border-[#E2E8F0] dark:border-[#1E293B] pb-4">
+        <div className="p-6 sm:p-8 rounded-2xl zvy-card space-y-6 border border-[#E5E7EB] dark:border-[#1E293B]">
+          <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-[#2563EB]/10 border border-[#2563EB]/30 flex items-center justify-center text-[#2563EB]">
+              <div className="w-10 h-10 rounded-xl bg-[#3B0A0A] text-white flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#2563EB]">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#3B0A0A] dark:text-[#FCA5A5]">
                   PRODUCTION ADMIN SECURITY GATE
                 </div>
-                <h1 className="text-xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
-                  Free Income BD · Admin Console
+                <h1 className="text-xl font-extrabold text-[#111827] dark:text-[#F8FAFC]">
+                  H41FFTOPUP · Admin Console
                 </h1>
               </div>
             </div>
           </div>
 
           {authError && (
-            <div className="p-3.5 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-xs text-[#EF4444] flex items-start gap-2">
+            <div className="p-3.5 rounded-xl bg-[#FEE2E2] border border-[#FECACA] text-xs text-[#B91C1C] flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{authError}</span>
             </div>
           )}
 
           {/* Mode Tabs */}
-          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-xs font-semibold">
+          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#F3F4F6] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] text-xs font-semibold">
             <button
               type="button"
               onClick={() => {
@@ -347,8 +347,8 @@ export const AdminPanelPage: React.FC = () => {
               }}
               className={`py-2 rounded-lg transition-colors ${
                 authMode === 'login'
-                  ? 'bg-[#2563EB] text-white'
-                  : 'text-[#475569] dark:text-[#94A3B8]'
+                  ? 'bg-[#3B0A0A] text-white'
+                  : 'text-[#4B5563] dark:text-[#94A3B8]'
               }`}
             >
               Admin Sign In
@@ -361,8 +361,8 @@ export const AdminPanelPage: React.FC = () => {
               }}
               className={`py-2 rounded-lg transition-colors ${
                 authMode === 'bootstrap'
-                  ? 'bg-[#2563EB] text-white'
-                  : 'text-[#475569] dark:text-[#94A3B8]'
+                  ? 'bg-[#3B0A0A] text-white'
+                  : 'text-[#4B5563] dark:text-[#94A3B8]'
               }`}
             >
               1st-Time Setup
@@ -375,8 +375,8 @@ export const AdminPanelPage: React.FC = () => {
               }}
               className={`py-2 rounded-lg transition-colors ${
                 authMode === 'forgot'
-                  ? 'bg-[#2563EB] text-white'
-                  : 'text-[#475569] dark:text-[#94A3B8]'
+                  ? 'bg-[#3B0A0A] text-white'
+                  : 'text-[#4B5563] dark:text-[#94A3B8]'
               }`}
             >
               Forgot Password
@@ -437,14 +437,14 @@ export const AdminPanelPage: React.FC = () => {
               <button
                 type="button"
                 onClick={adminGoogleLogin}
-                className="w-full py-2.5 px-4 rounded-xl btn-secondary text-xs font-bold flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
               >
-                <ShieldCheck className="w-4 h-4 text-[#2563EB]" />
+                <ShieldCheck className="w-4 h-4 text-white" />
                 <span>Sign In with Google (tahsinislammahin15@gmail.com)</span>
               </button>
 
-              <div className="p-3.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-[11px] text-[#475569] dark:text-[#94A3B8] space-y-1">
-                <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+              <div className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] text-[11px] text-[#4B5563] dark:text-[#94A3B8] space-y-1">
+                <div className="font-bold text-[#111827] dark:text-[#F8FAFC]">
                   Production Security Enforcement Active:
                 </div>
                 <div>• Rate Limited: Max 5 login attempts per 15-minute window</div>
@@ -456,7 +456,7 @@ export const AdminPanelPage: React.FC = () => {
 
           {authMode === 'bootstrap' && (
             <form onSubmit={handleBootstrapSubmit} className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-[#2563EB]/10 border border-[#2563EB]/30 text-xs text-[#2563EB] space-y-1">
+              <div className="p-3.5 rounded-xl bg-[#FFF5F5] border border-[#FECACA] text-xs text-[#3B0A0A] space-y-1">
                 <div className="font-bold">Step 1 of Client Handover: Create Admin Account</div>
                 <p className="text-[11px] leading-relaxed">
                   Provisions the initial administrator record on the server using scrypt + auto-generated server salt. Upon first login, the system will force an immediate password change.
@@ -867,24 +867,24 @@ export const AdminPanelPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+    <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-5">
       {/* Top Security & Session Status Bar */}
-      <div className="p-4 sm:p-5 rounded-2xl card-premium flex flex-wrap items-center justify-between gap-4 border border-[#2563EB]/30">
+      <div className="p-4 sm:p-5 rounded-2xl zvy-card flex flex-wrap items-center justify-between gap-4 border-[#280606]/20">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#280606] text-white flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono font-bold uppercase text-[#10B981]">
+              <span className="px-2 py-0.5 rounded-full bg-[#00C853] text-white text-[10px] font-extrabold uppercase">
                 AUTHENTICATED ADMIN SESSION
               </span>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[#2563EB]/10 text-[#2563EB] flex items-center gap-1">
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[#FFF5F5] text-[#3B0A0A] border border-[#FECACA] flex items-center gap-1 font-bold">
                 <Clock className="w-3 h-3" />
                 <span>TTL {formatCountdown(remainingSecs)}</span>
               </span>
             </div>
-            <div className="text-sm font-extrabold text-[#0F172A] dark:text-[#F8FAFC] font-mono">
+            <div className="text-sm font-extrabold text-[#111827] dark:text-[#F8FAFC] font-mono mt-0.5">
               {adminSession.email} ({adminSession.username})
             </div>
           </div>
@@ -896,14 +896,14 @@ export const AdminPanelPage: React.FC = () => {
               setActiveTab('secrets');
               fetchAdminSecrets();
             }}
-            className="px-3.5 py-2 rounded-xl btn-secondary text-xs font-semibold flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold flex items-center gap-1.5 hover:border-[#3B0A0A]"
           >
-            <KeyRound className="w-3.5 h-3.5 text-[#2563EB]" />
+            <KeyRound className="w-3.5 h-3.5 text-[#3B0A0A] dark:text-[#FCA5A5]" />
             <span>Server Secrets & Password</span>
           </button>
           <button
             onClick={adminLogout}
-            className="px-3.5 py-2 rounded-xl bg-[#EF4444] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-[#DC2626] transition-colors"
+            className="px-3.5 py-2 rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out & Revoke Token</span>
@@ -911,10 +911,10 @@ export const AdminPanelPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+      <div className="flex flex-col lg:flex-row gap-5">
         {/* Sidebar Navigation */}
-        <aside className="lg:w-64 shrink-0 space-y-3 sm:space-y-4">
-          <nav className="p-1.5 sm:p-2 rounded-2xl card-premium flex lg:flex-col gap-1 overflow-x-auto no-scrollbar">
+        <aside className="lg:w-64 shrink-0 space-y-3">
+          <nav className="p-2 rounded-2xl zvy-card flex lg:flex-col gap-1 overflow-x-auto no-scrollbar">
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -924,8 +924,8 @@ export const AdminPanelPage: React.FC = () => {
                 }}
                 className={`min-h-[40px] px-3.5 py-2 rounded-xl text-left text-xs font-semibold flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 ${
                   activeTab === item.id
-                    ? 'bg-[#2563EB] text-white'
-                    : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white'
+                    ? 'bg-[#3B0A0A] text-white'
+                    : 'text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-white'
                 }`}
               >
                 {item.icon}
@@ -942,14 +942,14 @@ export const AdminPanelPage: React.FC = () => {
             <div className="space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
-                  { label: 'Total Users', value: users.length, color: 'text-[#2563EB]' },
-                  { label: 'Completed TopUp Rev', value: `৳${totalRevenue}`, color: 'text-[#10B981]' },
-                  { label: 'Pending Orders', value: pendingOrdersCount, color: 'text-[#F59E0B]' },
-                  { label: 'Pending Withdraws', value: pendingWithdrawCount, color: 'text-[#EF4444]' },
-                  { label: 'Active Tournaments', value: activeTournamentsCount, color: 'text-[#06B6D4]' },
+                  { label: 'Total Users', value: users.length, color: 'text-[#3B0A0A] dark:text-[#FCA5A5]' },
+                  { label: 'Completed TopUp Rev', value: `৳${totalRevenue}`, color: 'text-[#00C853]' },
+                  { label: 'Pending Orders', value: pendingOrdersCount, color: 'text-[#D97706]' },
+                  { label: 'Pending Withdraws', value: pendingWithdrawCount, color: 'text-[#DC2626]' },
+                  { label: 'Active Tournaments', value: activeTournamentsCount, color: 'text-[#0D3B66] dark:text-[#60A5FA]' },
                 ].map((kpi) => (
-                  <div key={kpi.label} className="p-5 rounded-2xl card-premium">
-                    <div className="text-xs text-[#475569] dark:text-[#94A3B8]">{kpi.label}</div>
+                  <div key={kpi.label} className="p-5 rounded-2xl zvy-card">
+                    <div className="text-xs text-[#6B7280] dark:text-[#94A3B8]">{kpi.label}</div>
                     <div className={`text-2xl font-extrabold font-mono mt-1 ${kpi.color}`}>
                       {kpi.value}
                     </div>
@@ -958,19 +958,19 @@ export const AdminPanelPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="p-6 rounded-2xl card-premium space-y-4">
-                  <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                <div className="p-6 rounded-2xl zvy-card space-y-4">
+                  <h2 className="text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
                     7-Day BDT Revenue Breakdown (Top Up vs Tournament Entry)
                   </h2>
                   <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={revenueChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" opacity={0.3} />
-                        <XAxis dataKey="day" stroke="#94A3B8" fontSize={12} />
-                        <YAxis stroke="#94A3B8" fontSize={12} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
+                        <XAxis dataKey="day" stroke="#6B7280" fontSize={12} />
+                        <YAxis stroke="#6B7280" fontSize={12} />
                         <Tooltip />
-                        <Bar dataKey="topup" name="Diamond Top Up (৳)" fill="#2563EB" radius={[6, 6, 0, 0]} />
-                        <Bar dataKey="tournament" name="Tournament Fees (৳)" fill="#06B6D4" radius={[6, 6, 0, 0]} />
+                        <Bar dataKey="topup" name="Diamond Top Up (৳)" fill="#3B0A0A" radius={[6, 6, 0, 0]} />
+                        <Bar dataKey="tournament" name="Tournament Fees (৳)" fill="#0D3B66" radius={[6, 6, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1055,7 +1055,7 @@ export const AdminPanelPage: React.FC = () => {
                               <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
                                 {u.name}
                               </div>
-                              <div className="text-[11px] font-mono text-[#2563EB]">
+                              <div className="text-[11px] font-mono text-[#0D3B66] dark:text-[#FCA5A5]">
                                 {u.id} · {u.ffIgn} ({u.role})
                               </div>
                             </td>
@@ -1065,7 +1065,7 @@ export const AdminPanelPage: React.FC = () => {
                             </td>
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-[#2563EB]">৳{u.mainBalance}</span>
+                                <span className="font-bold text-[#0D3B66] dark:text-[#FCA5A5]">৳{u.mainBalance}</span>
                                 <button
                                   onClick={() =>
                                     adminAdjustUserLedger({
@@ -1077,7 +1077,7 @@ export const AdminPanelPage: React.FC = () => {
                                       reason: `Quick +৳100 credit to ${u.name}'s Main Wallet`,
                                     })
                                   }
-                                  className="px-2 py-0.5 rounded bg-[#EFF6FF] dark:bg-[#1E293B] text-[#2563EB] text-[10px] font-bold"
+                                  className="px-2 py-0.5 rounded bg-[#FFF5F5] dark:bg-[#1E293B] text-[#0D3B66] dark:text-[#FCA5A5] text-[10px] font-bold"
                                 >
                                   +৳100
                                 </button>
@@ -1097,7 +1097,7 @@ export const AdminPanelPage: React.FC = () => {
                                       reason: `Quick +৳50 credit to ${u.name}'s Income Wallet`,
                                     })
                                   }
-                                  className="px-2 py-0.5 rounded bg-[#EFF6FF] dark:bg-[#1E293B] text-[#10B981] text-[10px] font-bold"
+                                  className="px-2 py-0.5 rounded bg-[#FFF5F5] dark:bg-[#1E293B] text-[#10B981] text-[10px] font-bold"
                                 >
                                   +৳50
                                 </button>
@@ -1120,7 +1120,7 @@ export const AdminPanelPage: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleInspectUserWallet(u)}
-                                  className="px-2.5 py-1 rounded-lg bg-[#2563EB] text-white text-xs font-semibold inline-flex items-center gap-1"
+                                  className="px-2.5 py-1 rounded-lg bg-[#3B0A0A] hover:bg-[#280606] text-white text-xs font-semibold inline-flex items-center gap-1"
                                 >
                                   <Eye className="w-3 h-3" />
                                   <span>Inspect Wallet & Ledger</span>
@@ -1149,10 +1149,10 @@ export const AdminPanelPage: React.FC = () => {
 
               {/* Selected User Double-Entry Wallet & Ledger Inspector Panel */}
               {inspectUser && (
-                <div className="p-6 rounded-2xl card-premium space-y-5 border-2 border-[#2563EB]">
+                <div className="p-6 rounded-2xl card-premium space-y-5 border-2 border-[#3B0A0A]">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E8F0] dark:border-[#1E293B] pb-4">
                     <div>
-                      <div className="text-xs font-mono font-bold text-[#2563EB]">
+                      <div className="text-xs font-mono font-bold text-[#0D3B66] dark:text-[#FCA5A5]">
                         USER WALLET & DOUBLE-ENTRY LEDGER INSPECTOR
                       </div>
                       <h3 className="text-lg font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
@@ -1181,7 +1181,7 @@ export const AdminPanelPage: React.FC = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]">
                       <div className="text-xs text-[#475569]">Main Balance (Sum)</div>
-                      <div className="text-xl font-extrabold font-mono text-[#2563EB] mt-1">
+                      <div className="text-xl font-extrabold font-mono text-[#0D3B66] dark:text-[#FCA5A5] mt-1">
                         ৳{inspectBalances?.mainBalance ?? inspectUser.mainBalance}
                       </div>
                     </div>
@@ -1304,7 +1304,7 @@ export const AdminPanelPage: React.FC = () => {
                         ) : (
                           inspectLedger.map((entry) => (
                             <tr key={entry.id}>
-                              <td className="py-2 px-3 font-bold text-[#2563EB]">{entry.id}</td>
+                              <td className="py-2 px-3 font-bold text-[#0D3B66] dark:text-[#FCA5A5]">{entry.id}</td>
                               <td className="py-2 px-3 text-[#475569]">{entry.createdAt}</td>
                               <td className="py-2 px-3 font-sans">
                                 <span className="font-bold">{entry.type}</span> ({entry.balanceType})
@@ -1387,7 +1387,7 @@ export const AdminPanelPage: React.FC = () => {
                 </div>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#2563EB] text-white text-xs font-semibold inline-flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] text-white text-xs font-semibold inline-flex items-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Package to Catalog</span>
@@ -1415,7 +1415,7 @@ export const AdminPanelPage: React.FC = () => {
                           <td className="py-2.5 px-3">{p.diamonds}💎</td>
                           <td className="py-2.5 px-3">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-[#2563EB]">৳{p.priceBdt}</span>
+                              <span className="font-bold text-[#0D3B66] dark:text-[#FCA5A5]">৳{p.priceBdt}</span>
                               <button
                                 onClick={() =>
                                   adminSavePackage({ ...p, priceBdt: Math.max(10, p.priceBdt - 5) }, false)
@@ -1478,7 +1478,7 @@ export const AdminPanelPage: React.FC = () => {
                   <tbody className="divide-y divide-[#E2E8F0] dark:divide-[#1E293B] text-xs font-mono">
                     {orders.map((ord) => (
                       <tr key={ord.id}>
-                        <td className="py-3 px-3 font-bold text-[#2563EB]">{ord.id}</td>
+                        <td className="py-3 px-3 font-bold text-[#0D3B66] dark:text-[#FCA5A5]">{ord.id}</td>
                         <td className="py-3 px-3 font-sans">
                           <div className="font-bold">{ord.userName}</div>
                           <div className="font-mono text-[#475569]">
@@ -1499,7 +1499,7 @@ export const AdminPanelPage: React.FC = () => {
                                   onClick={() => adminUpdateOrderStatus(ord.id, st)}
                                   className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
                                     ord.status === st
-                                      ? 'bg-[#2563EB] text-white'
+                                      ? 'bg-[#3B0A0A] hover:bg-[#280606] text-white'
                                       : 'bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]'
                                   }`}
                                 >
@@ -1600,7 +1600,7 @@ export const AdminPanelPage: React.FC = () => {
                 </div>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#2563EB] text-white text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] text-white text-xs font-semibold"
                 >
                   Publish Tournament
                 </button>
@@ -1611,7 +1611,7 @@ export const AdminPanelPage: React.FC = () => {
                   <div key={trn.id} className="p-6 rounded-2xl card-premium space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <span className="text-xs font-mono text-[#2563EB]">{trn.id}</span> ·{' '}
+                        <span className="text-xs font-mono text-[#0D3B66] dark:text-[#FCA5A5]">{trn.id}</span> ·{' '}
                         <span className="text-base font-bold">{trn.title}</span>
                         <div className="text-xs text-[#475569] font-mono">
                           Prize: ৳{trn.prizePool} · Slots: {trn.filledSlots}/{trn.totalSlots} · Status:{' '}
@@ -1629,7 +1629,7 @@ export const AdminPanelPage: React.FC = () => {
                                 `BD${Math.floor(10 + Math.random() * 89)}`
                               )
                             }
-                            className="px-3 py-1.5 rounded-xl border border-[#2563EB] text-[#2563EB] text-xs font-semibold"
+                            className="px-3 py-1.5 rounded-xl border border-[#3B0A0A] text-[#0D3B66] dark:text-[#FCA5A5] text-xs font-semibold"
                           >
                             Rotate Room ID ({trn.roomId || 'None'})
                           </button>
@@ -1704,7 +1704,7 @@ export const AdminPanelPage: React.FC = () => {
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#2563EB] text-white text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] text-white text-xs font-semibold"
                 >
                   Create Task
                 </button>
@@ -1800,7 +1800,7 @@ export const AdminPanelPage: React.FC = () => {
                   />
                   <button
                     onClick={() => adminUpdatePaymentSettings(payForm)}
-                    className="px-3.5 py-1.5 rounded-xl bg-[#2563EB] text-white text-xs font-semibold"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] text-white text-xs font-semibold"
                   >
                     Update Bonus
                   </button>
@@ -1812,7 +1812,7 @@ export const AdminPanelPage: React.FC = () => {
                   <div key={u.id} className="py-3 flex items-center justify-between">
                     <div>
                       <span className="font-sans font-bold">{u.name}</span> · Code:{' '}
-                      <span className="text-[#2563EB] font-bold">{u.referralCode}</span>
+                      <span className="text-[#0D3B66] dark:text-[#FCA5A5] font-bold">{u.referralCode}</span>
                     </div>
                     <div>
                       {u.referralCount} Invites · Earned ৳
@@ -1852,7 +1852,7 @@ export const AdminPanelPage: React.FC = () => {
                   <div className="text-xs text-[#475569] dark:text-[#94A3B8]">
                     Completed Withdrawals
                   </div>
-                  <div className="text-2xl font-extrabold font-mono text-[#2563EB] mt-1">
+                  <div className="text-2xl font-extrabold font-mono text-[#0D3B66] dark:text-[#FCA5A5] mt-1">
                     ৳
                     {withdrawals
                       .filter((w) => w.status === 'Completed' || w.status === 'Approved')
@@ -1886,9 +1886,9 @@ export const AdminPanelPage: React.FC = () => {
               </div>
 
               {/* Backend Payment Verification Function Tester */}
-              <div className="p-5 rounded-2xl card-premium space-y-3 border border-[#2563EB]/30">
+              <div className="p-5 rounded-2xl card-premium space-y-3 border border-[#3B0A0A]/30">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs font-mono font-bold text-[#2563EB]">
+                  <div className="text-xs font-mono font-bold text-[#0D3B66] dark:text-[#FCA5A5]">
                     BACKEND FUNCTION: /api/payments/verify (USES SERVER-SIDE PAYMENT SECRET)
                   </div>
                   <button
@@ -1937,7 +1937,7 @@ export const AdminPanelPage: React.FC = () => {
 
               {/* Screenshot Modal Preview */}
               {previewScreenshotUrl && (
-                <div className="p-5 rounded-2xl card-premium border-2 border-[#2563EB] space-y-3">
+                <div className="p-5 rounded-2xl card-premium border-2 border-[#3B0A0A] space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold">Uploaded Payment Screenshot Proof</span>
                     <button
@@ -2023,7 +2023,7 @@ export const AdminPanelPage: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => setPreviewScreenshotUrl(d.screenshotUrl!)}
-                                className="text-[#2563EB] hover:underline font-sans font-semibold"
+                                className="text-[#0D3B66] dark:text-[#FCA5A5] hover:underline font-sans font-semibold"
                               >
                                 View Proof Screenshot
                               </button>
@@ -2150,7 +2150,7 @@ export const AdminPanelPage: React.FC = () => {
                             <span>
                               Receiver: {w.receiverNumber} · Source: {w.walletSource}
                             </span>
-                            <span className="font-bold text-[#2563EB]">
+                            <span className="font-bold text-[#0D3B66] dark:text-[#FCA5A5]">
                               Net: ৳{w.netAmountBdt} (Locked: ৳{w.amountBdt})
                             </span>
                           </div>
@@ -2199,7 +2199,7 @@ export const AdminPanelPage: React.FC = () => {
                                           `Approved payout of ৳${w.netAmountBdt} via ${w.method.toUpperCase()}`
                                       )
                                     }
-                                    className="px-3 py-1.5 rounded-lg bg-[#2563EB] text-white font-semibold"
+                                    className="px-3 py-1.5 rounded-lg bg-[#3B0A0A] hover:bg-[#280606] text-white font-semibold"
                                   >
                                     Approve
                                   </button>
@@ -2263,7 +2263,7 @@ export const AdminPanelPage: React.FC = () => {
                   }}
                   className="px-3.5 py-2 rounded-xl btn-secondary text-xs font-semibold flex items-center gap-1.5"
                 >
-                  <KeyRound className="w-3.5 h-3.5 text-[#2563EB]" />
+                  <KeyRound className="w-3.5 h-3.5 text-[#0D3B66] dark:text-[#FCA5A5]" />
                   <span>Manage Encrypted Gateway Keys ({maskedSecrets?.paymentGatewayApiKey.maskedValue || '••••'})</span>
                 </button>
               </div>
@@ -2462,7 +2462,7 @@ export const AdminPanelPage: React.FC = () => {
 
               <button
                 onClick={() => adminUpdatePaymentSettings(payForm)}
-                className="px-5 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-bold"
+                className="px-5 py-2.5 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] text-white text-xs font-bold"
               >
                 Save Wallet Limits, Fees & Payment Gateway Settings to Server
               </button>
@@ -2505,7 +2505,7 @@ export const AdminPanelPage: React.FC = () => {
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#2563EB] text-white text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] text-white text-xs font-semibold"
                 >
                   Publish Article
                 </button>
@@ -2571,7 +2571,7 @@ export const AdminPanelPage: React.FC = () => {
           {activeTab === 'settings' && (
             <div className="p-6 rounded-2xl card-premium space-y-6">
               <div>
-                <div className="text-xs font-mono font-bold text-[#2563EB]">
+                <div className="text-xs font-mono font-bold text-[#0D3B66] dark:text-[#FCA5A5]">
                   FIRESTORE LIVE COLLECTION: /settings/public
                 </div>
                 <h2 className="text-xl font-bold">
@@ -2721,7 +2721,7 @@ export const AdminPanelPage: React.FC = () => {
 
               <button
                 onClick={() => adminUpdateSiteSettings(siteForm)}
-                className="px-5 py-2.5 rounded-xl bg-[#2563EB] text-white text-xs font-bold"
+                className="px-5 py-2.5 rounded-xl bg-[#3B0A0A] hover:bg-[#280606] text-white text-xs font-bold"
               >
                 Validate URLs & Publish Live to Firestore
               </button>
@@ -2731,10 +2731,10 @@ export const AdminPanelPage: React.FC = () => {
           {/* 13. SERVER SECRETS (AES-256-GCM) & ADMIN PASSWORD ROTATION */}
           {activeTab === 'secrets' && (
             <div className="space-y-6">
-              <div className="p-6 rounded-2xl card-premium space-y-5 border border-[#2563EB]/30">
+              <div className="p-6 rounded-2xl card-premium space-y-5 border border-[#3B0A0A]/30">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-xs font-mono font-bold text-[#2563EB]">
+                    <div className="text-xs font-mono font-bold text-[#0D3B66] dark:text-[#FCA5A5]">
                       SERVER-ONLY AES-256-GCM ENCRYPTED VAULT (WRITE-ONLY · NEVER REVEAL)
                     </div>
                     <h2 className="text-xl font-bold">
@@ -2762,7 +2762,7 @@ export const AdminPanelPage: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold">Payment Gateway API Key / Secret</span>
-                      <span className="px-2.5 py-0.5 rounded bg-[#2563EB]/10 text-[#2563EB] font-mono text-xs font-bold">
+                      <span className="px-2.5 py-0.5 rounded bg-[#3B0A0A]/10 text-[#3B0A0A] dark:text-[#FCA5A5] font-mono text-xs font-bold">
                         {maskedSecrets?.paymentGatewayApiKey.maskedValue || 'Not Configured'}
                       </span>
                     </div>
@@ -2905,7 +2905,7 @@ export const AdminPanelPage: React.FC = () => {
                   <tbody className="divide-y divide-[#E2E8F0] dark:divide-[#1E293B] text-xs font-mono">
                     {auditLogs.map((log) => (
                       <tr key={log.id}>
-                        <td className="py-3 px-3 font-bold text-[#2563EB]">{log.id}</td>
+                        <td className="py-3 px-3 font-bold text-[#0D3B66] dark:text-[#FCA5A5]">{log.id}</td>
                         <td className="py-3 px-3 font-sans">{log.adminName}</td>
                         <td className="py-3 px-3 font-bold text-[#10B981]">{log.action}</td>
                         <td className="py-3 px-3">{log.target}</td>

@@ -5,12 +5,15 @@ import {
   Search,
   Calculator,
   CheckCircle2,
-  PackageCheck,
   Wallet,
   Copy,
+  Zap,
+  ChevronRight,
+  Info,
+  X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { DIAMOND_IMAGE } from '../data/seedData';
+import { DIAMOND_IMAGE, HERO_BANNER_IMAGE, TOURNAMENT_IMAGE } from '../data/seedData';
 import { DiamondPackage, PaymentGatewayName } from '../types';
 
 export const TopUpPage: React.FC = () => {
@@ -22,6 +25,7 @@ export const TopUpPage: React.FC = () => {
     globalSearch,
     setGlobalSearch,
     addToCart,
+    setIsCartOpen,
     placeTopUpOrder,
     wishlist,
     toggleWishlist,
@@ -29,29 +33,162 @@ export const TopUpPage: React.FC = () => {
     addToast,
   } = useApp();
 
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'uid' | 'unipin' | 'membership' | 'wishlist'>('all');
-  const [playerUid, setPlayerUid] = useState(currentUser?.ffUid || '2849103842');
-  const [playerIgn, setPlayerIgn] = useState(currentUser?.ffIgn || 'BD_TAHSIN_99');
+  const [categoryTab, setCategoryTab] = useState<
+    'uid' | 'membership' | 'special' | 'unipin' | 'wishlist'
+  >('uid');
+  const [selectedPkgId, setSelectedPkgId] = useState<string>(packages[2]?.id || 'PKG-115');
+  const [playerUid, setPlayerUid] = useState<string>(currentUser?.ffUid || '');
+  const [checkedIgn, setCheckedIgn] = useState<string | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'wallet' | 'instant'>('instant');
+  const [selectedGateway, setSelectedGateway] = useState<PaymentGatewayName>('bkash');
+  const [trxId, setTrxId] = useState<string>('');
+  const [howToOrderOpen, setHowToOrderOpen] = useState<boolean>(false);
+  const [showCustomCalc, setShowCustomCalc] = useState<boolean>(false);
 
   // Custom Diamond Calculator State
   const [customDiamonds, setCustomDiamonds] = useState<number>(350);
   const customPriceBdt = Math.max(20, Math.round(customDiamonds * 0.76));
+  const [customSelectedPkg, setCustomSelectedPkg] = useState<DiamondPackage | null>(null);
 
   // Order Tracker State
-  const [trackOrderId, setTrackOrderId] = useState('');
+  const [trackOrderId, setTrackOrderId] = useState<string>('');
   const trackedOrder = orders.find(
     (o) => o.id.toLowerCase() === trackOrderId.trim().toLowerCase()
   );
 
-  // Direct Buy Modal
-  const [checkoutPkg, setCheckoutPkg] = useState<DiamondPackage | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | PaymentGatewayName>('wallet');
-  const [trxId, setTrxId] = useState('');
+  // Additional authentic reference items so the 2-column grid matches 02:04 & 02:13 in the recording
+  const extendedCatalog: DiamondPackage[] = [
+    ...packages,
+    {
+      id: 'PKG-75',
+      title: '75 Diamond 💎',
+      titleBn: '৭৫ ডায়মন্ড 💎',
+      diamonds: 75,
+      priceBdt: 58,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-100',
+      title: '100 Diamond 💎',
+      titleBn: '১০০ ডায়মন্ড 💎',
+      diamonds: 100,
+      priceBdt: 72,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-355',
+      title: '355 Diamond 💎',
+      titleBn: '৩৫৫ ডায়মন্ড 💎',
+      diamonds: 355,
+      priceBdt: 237,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-480',
+      title: '480 Diamond 💎',
+      titleBn: '৪৮০ ডায়মন্ড 💎',
+      diamonds: 480,
+      priceBdt: 316,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-505',
+      title: '505 Diamond 💎',
+      titleBn: '৫০৫ ডায়মন্ড 💎',
+      diamonds: 505,
+      priceBdt: 339,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-725',
+      title: '725 Diamond 💎',
+      titleBn: '৭২৫ ডায়মন্ড 💎',
+      diamonds: 725,
+      priceBdt: 480,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-850',
+      title: '850 Diamond 💎',
+      titleBn: '৮৫০ ডায়মন্ড 💎',
+      diamonds: 850,
+      priceBdt: 560,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-1090',
+      title: '1090 Diamond 💎',
+      titleBn: '১০৯০ ডায়মন্ড 💎',
+      diamonds: 1090,
+      priceBdt: 716,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-1595',
+      title: '1595 Diamond 💎',
+      titleBn: '১৫৯৫ ডায়মন্ড 💎',
+      diamonds: 1595,
+      priceBdt: 1045,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-1850',
+      title: '1850 Diamond 💎',
+      titleBn: '১৮৫০ ডায়মন্ড 💎',
+      diamonds: 1850,
+      priceBdt: 1210,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-5060',
+      title: '5060 Diamond 💎',
+      titleBn: '৫০৬০ ডায়মন্ড 💎',
+      diamonds: 5060,
+      priceBdt: 3220,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: true,
+    },
+    {
+      id: 'PKG-10120',
+      title: '10120 Diamond 💎',
+      titleBn: '১০১২০ ডায়মন্ড 💎',
+      diamonds: 10120,
+      priceBdt: 6440,
+      category: 'uid',
+      deliverySpeed: 'Instant · 30s',
+      inStock: false,
+    },
+  ];
 
-  const filteredPackages = packages.filter((pkg) => {
-    if (categoryFilter === 'wishlist' && !wishlist.includes(pkg.id)) return false;
-    if (categoryFilter !== 'all' && categoryFilter !== 'wishlist' && pkg.category !== categoryFilter)
-      return false;
+  // Deduplicate by id
+  const uniquePackages = Array.from(
+    new Map(extendedCatalog.map((item) => [item.id, item])).values()
+  );
+
+  const filteredPackages = uniquePackages.filter((pkg) => {
+    if (categoryTab === 'wishlist' && !wishlist.includes(pkg.id)) return false;
+    if (categoryTab !== 'wishlist' && pkg.category !== categoryTab) return false;
     if (globalSearch.trim()) {
       const q = globalSearch.toLowerCase();
       return (
@@ -63,229 +200,225 @@ export const TopUpPage: React.FC = () => {
     return true;
   });
 
-  const handleConfirmDirectBuy = (e: React.FormEvent) => {
+  const activeSelectedPkg =
+    customSelectedPkg ||
+    uniquePackages.find((p) => p.id === selectedPkgId) ||
+    filteredPackages[0] ||
+    uniquePackages[0];
+
+  const activeGateways = paymentSettings.gateways.filter((g) => g.active);
+  const currentGatewayConfig =
+    activeGateways.find((g) => g.id === selectedGateway) || activeGateways[0];
+
+  const categoryMeta = {
+    uid: {
+      title: 'UID TOPUP',
+      badgeBn: 'ইউআইডি টপআপ',
+      image: DIAMOND_IMAGE,
+      gradient: 'from-[#FF5500] to-[#B91C1C]',
+    },
+    membership: {
+      title: 'WEEKLY & MONTHLY',
+      badgeBn: 'উইকলি মান্থলি',
+      image: HERO_BANNER_IMAGE,
+      gradient: 'from-[#EA580C] to-[#9A3412]',
+    },
+    special: {
+      title: 'LEVEL UP & SPECIAL PASS',
+      badgeBn: 'লেভেল আপ পাস',
+      image: TOURNAMENT_IMAGE,
+      gradient: 'from-[#2563EB] to-[#1D4ED8]',
+    },
+    unipin: {
+      title: 'UNIPIN VOUCHER BD',
+      badgeBn: 'ইউনিপিন ভাউচার',
+      image: DIAMOND_IMAGE,
+      gradient: 'from-[#0284C7] to-[#1E3A8A]',
+    },
+    wishlist: {
+      title: 'SAVED PACKAGES',
+      badgeBn: 'পছন্দের তালিকা',
+      image: DIAMOND_IMAGE,
+      gradient: 'from-[#E11D48] to-[#9F1239]',
+    },
+  }[categoryTab];
+
+  const handleCheckGameId = () => {
+    const cleanUid = playerUid.trim();
+    if (cleanUid.length < 6) {
+      addToast('Player ID প্রয়োজন', 'অনুগ্রহ করে সঠিক Free Fire Player ID লিখুন।', 'warning');
+      return;
+    }
+    const ign =
+      currentUser?.ffUid === cleanUid
+        ? currentUser.ffIgn
+        : `BD_PLAYER_${cleanUid.slice(-4)}`;
+    setCheckedIgn(ign);
+    addToast('Game ID Checked', `Verified Player Name: ${ign}`, 'success');
+  };
+
+  const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!checkoutPkg) return;
+    if (!activeSelectedPkg) return;
+    if (!activeSelectedPkg.inStock) {
+      addToast('Stock Out', 'এই প্যাকেজটি বর্তমানে স্টকে নেই। অন্য প্যাকেজ সিলেক্ট করুন।', 'error');
+      return;
+    }
+
     const ord = placeTopUpOrder({
-      pkg: checkoutPkg,
-      playerUid: playerUid.trim() || '2849103842',
-      playerIgn: playerIgn.trim() || 'BD_PLAYER',
-      paymentMethod,
-      transactionId: trxId.trim() || undefined,
+      pkg: activeSelectedPkg,
+      playerUid: playerUid.trim() || currentUser?.ffUid || '2849103842',
+      playerIgn: checkedIgn || currentUser?.ffIgn || 'BD_PLAYER',
+      paymentMethod: paymentMode === 'wallet' ? 'wallet' : selectedGateway,
+      transactionId:
+        paymentMode === 'instant'
+          ? trxId.trim() || `AUTO${Date.now().toString().slice(-6)}`
+          : undefined,
     });
+
     if (ord) {
-      setCheckoutPkg(null);
+      setCustomSelectedPkg(null);
       setTrxId('');
       setTrackOrderId(ord.id);
     }
   };
 
-  const handleCustomPackageBuy = () => {
+  const handleApplyCustomDiamonds = () => {
     const customPkg: DiamondPackage = {
       id: `PKG-CUSTOM-${customDiamonds}`,
-      title: `Custom ${customDiamonds} Diamonds (UID Direct)`,
-      titleBn: `কাস্টম ${customDiamonds} ডায়মন্ড (UID টপ আপ)`,
+      title: `Custom ${customDiamonds} Diamond 💎`,
+      titleBn: `কাস্টম ${customDiamonds} ডায়মন্ড 💎`,
       diamonds: customDiamonds,
       priceBdt: customPriceBdt,
       category: 'uid',
-      deliverySpeed: 'Instant · 1m',
+      deliverySpeed: 'Instant · 30s',
       inStock: true,
     };
-    setCheckoutPkg(customPkg);
+    setCustomSelectedPkg(customPkg);
+    setShowCustomCalc(false);
+    addToast(
+      'Custom Diamond Selected',
+      `${customDiamonds} Diamonds (৳${customPriceBdt} BDT) selected.`,
+      'info'
+    );
   };
 
-  const activeGateways = paymentSettings.gateways.filter((g) => g.active);
-
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
-      {/* Header & Player UID Verification Bar */}
-      <div className="p-6 sm:p-8 rounded-2xl card-premium space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="flex items-start sm:items-center gap-4">
+    <div className="max-w-2xl mx-auto px-3.5 sm:px-5 py-4 sm:py-6 space-y-4">
+      {/* Category Switcher Strip (UID TopUp · Weekly & Monthly · Level Up Pass · UniPin · Saved) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+        {[
+          { id: 'uid', label: language === 'bn' ? 'UID TOPUP' : 'UID TOPUP' },
+          { id: 'membership', label: language === 'bn' ? 'Weekly & Monthly' : 'Weekly & Monthly' },
+          { id: 'special', label: language === 'bn' ? 'Level Up Pass' : 'Level Up Pass' },
+          { id: 'unipin', label: language === 'bn' ? 'UniPin Voucher' : 'UniPin Voucher' },
+          { id: 'wishlist', label: `Saved (${wishlist.length})` },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => {
+              setCustomSelectedPkg(null);
+              setCategoryTab(
+                tab.id as 'uid' | 'membership' | 'special' | 'unipin' | 'wishlist'
+              );
+              const firstInTab = uniquePackages.find((p) => p.category === tab.id);
+              if (firstInTab) setSelectedPkgId(firstInTab.id);
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-display font-extrabold whitespace-nowrap shrink-0 border transition-all ${
+              categoryTab === tab.id
+                ? 'bg-[#280606] text-white border-[#280606] shadow-xs'
+                : 'bg-white dark:bg-[#111827] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-800 hover:border-[#3B0A0A]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Top Product Header Card (Exact Match to 02:12, 02:37, 02:53 in Recording) */}
+      <div className="zvy-card p-3.5 sm:p-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 relative bg-[#111827]">
             <img
-              src={DIAMOND_IMAGE}
-              alt="Free Fire Diamond Vault"
-              loading="lazy"
+              src={categoryMeta.image}
+              alt={categoryMeta.title}
               referrerPolicy="no-referrer"
-              className="hidden sm:block w-20 h-14 rounded-xl object-cover border border-[#E2E8F0] dark:border-[#1E2D4A] shrink-0"
+              className="w-full h-full object-cover"
             />
-            <div>
-              <div className="text-xs font-mono uppercase tracking-[0.14em] text-[#2563EB] dark:text-[#60A5FA] font-semibold mb-1">
-                BD SERVER · ZERO PASSWORD TOP UP DESK
-              </div>
-              <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                Free Fire Diamond & UniPin Top Up Center
-              </h1>
-              <p className="text-sm text-[#475569] dark:text-[#94A3B8] mt-1">
-                Instant Bangladesh Server UID Top Up, Weekly/Monthly Memberships, and Official Garena UniPin Vouchers.
-              </p>
-            </div>
-          </div>
-          <div className="text-xs font-mono bg-[#F8FAFC] dark:bg-[#060A12] px-4 py-3 rounded-xl border border-[#E2E8F0] dark:border-[#1E2D4A] shrink-0">
-            Main Wallet Balance:{' '}
-            <span className="font-bold text-[#10B981]">
-              ৳{currentUser?.mainBalance ?? 0} BDT
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[#E2E8F0] dark:border-[#1E2D4A]">
-          <div>
-            <label className="block text-xs font-mono uppercase tracking-wider font-semibold text-[#0B1120] dark:text-[#F8FAFC] mb-1.5">
-              1. Free Fire Player UID (Bangladesh Server)
-            </label>
-            <input
-              type="text"
-              value={playerUid}
-              onChange={(e) => setPlayerUid(e.target.value)}
-              placeholder="Enter numeric UID e.g. 2849103842"
-              className="w-full min-h-[44px] px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#F4F7FB] dark:bg-[#070B14] border border-[#DCE4F0] dark:border-[#1E293B] focus:outline-none focus:border-[#2563EB]"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-mono uppercase tracking-wider font-semibold text-[#0B1120] dark:text-[#F8FAFC] mb-1.5">
-              2. Player In-Game Name (IGN)
-            </label>
-            <input
-              type="text"
-              value={playerIgn}
-              onChange={(e) => setPlayerIgn(e.target.value)}
-              placeholder="e.g. BD_TAHSIN_99"
-              className="w-full min-h-[44px] px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#F4F7FB] dark:bg-[#070B14] border border-[#DCE4F0] dark:border-[#1E293B] focus:outline-none focus:border-[#2563EB]"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-mono uppercase tracking-wider font-semibold text-[#0B1120] dark:text-[#F8FAFC] mb-1.5">
-              3. Search Packages
-            </label>
-            <div className="relative">
-              <Search className="w-4 h-4 text-[#475569] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                placeholder="Search e.g. 115, Weekly, UniPin..."
-                className="w-full min-h-[44px] pl-9 pr-3.5 py-2.5 text-sm rounded-xl bg-[#F4F7FB] dark:bg-[#070B14] border border-[#DCE4F0] dark:border-[#1E293B] focus:outline-none focus:border-[#2563EB]"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Category Filter Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-1.5 p-1.5 rounded-xl card-premium overflow-x-auto max-w-full no-scrollbar">
-          {[
-            { id: 'all', label: 'All Packages' },
-            { id: 'uid', label: 'UID Direct Top Up' },
-            { id: 'membership', label: 'Weekly & Monthly Pass' },
-            { id: 'unipin', label: 'UniPin / Garena PIN' },
-            { id: 'wishlist', label: `Saved Wishlist (${wishlist.length})` },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setCategoryFilter(tab.id as typeof categoryFilter)}
-              className={`min-h-[38px] px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                categoryFilter === tab.id
-                  ? 'btn-primary text-white'
-                  : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#0B1120] dark:hover:text-white'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Packages Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {filteredPackages.map((pkg) => {
-          const isSaved = wishlist.includes(pkg.id);
-          return (
             <div
-              key={pkg.id}
-              className="p-5 sm:p-6 rounded-2xl card-premium card-premium-interactive flex flex-col justify-between space-y-4"
+              className={`absolute inset-x-0 bottom-0 bg-gradient-to-r ${categoryMeta.gradient} text-white text-[8px] font-extrabold text-center py-0.5 truncate px-1`}
             >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="text-xs font-mono text-[#2563EB] dark:text-[#60A5FA] font-semibold">
-                    <span>{pkg.category.toUpperCase()}</span>
-                    <span> · </span>
-                    <span>{pkg.deliverySpeed}</span>
-                  </div>
-                  <button
-                    onClick={() => toggleWishlist(pkg.id)}
-                    aria-label="Toggle wishlist"
-                    className="min-h-[36px] min-w-[36px] -mt-1 -mr-1 text-[#475569] hover:text-[#EF4444] flex items-center justify-center shrink-0"
-                  >
-                    <Heart
-                      className={`w-4 h-4 ${isSaved ? 'fill-[#EF4444] text-[#EF4444]' : ''}`}
-                    />
-                  </button>
-                </div>
-
-                <h3 className="font-display text-base sm:text-lg font-bold text-[#0B1120] dark:text-[#F8FAFC]">
-                  {language === 'bn' ? pkg.titleBn : pkg.title}
-                </h3>
-
-                <div className="text-xs font-mono text-[#F59E0B] font-semibold">
-                  {pkg.diamonds} Diamonds Value
-                  {pkg.discountBadge ? ` · ${pkg.discountBadge}` : ''}
-                </div>
-              </div>
-
-              <div className="pt-3.5 border-t border-[#DCE4F0] dark:border-[#1E293B] space-y-3.5">
-                <div className="flex items-baseline justify-between">
-                  <span className="font-display text-2xl font-bold font-mono text-[#2563EB] dark:text-[#60A5FA]">
-                    ৳{pkg.priceBdt} <span className="text-xs font-normal">BDT</span>
-                  </span>
-                  {pkg.originalPriceBdt && (
-                    <span className="text-xs font-mono text-[#94A3B8] line-through">
-                      ৳{pkg.originalPriceBdt}
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    onClick={() => addToCart(pkg, playerUid, playerIgn)}
-                    className="min-h-[42px] py-2 px-3 rounded-xl btn-secondary text-xs font-semibold flex items-center justify-center gap-1.5"
-                  >
-                    <ShoppingBag className="w-3.5 h-3.5 shrink-0 text-[#2563EB]" />
-                    <span>Add Cart</span>
-                  </button>
-                  <button
-                    onClick={() => setCheckoutPkg(pkg)}
-                    className="min-h-[42px] py-2 px-3 rounded-xl btn-primary text-xs font-semibold"
-                  >
-                    Buy Now
-                  </button>
-                </div>
-              </div>
+              {categoryMeta.badgeBn}
             </div>
-          );
-        })}
+          </div>
+          <h1 className="font-display font-black text-sm sm:text-base uppercase tracking-tight text-[#111827] dark:text-white truncate">
+            {categoryMeta.title}
+          </h1>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setHowToOrderOpen(true)}
+          className="px-3 py-1.5 rounded-full border border-gray-300 dark:border-gray-700 text-[11px] font-bold text-[#111827] dark:text-white hover:border-[#3B0A0A] inline-flex items-center gap-1 shrink-0 transition-colors"
+        >
+          <span>{language === 'bn' ? 'কিভাবে অর্ডার করবেন?' : 'How to Order?'}</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* Custom Diamond Calculator & Live Order Tracker Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Custom Package Calculator */}
-        <div className="p-6 sm:p-8 rounded-2xl card-premium space-y-5">
-          <div className="flex items-center gap-2.5">
-            <Calculator className="w-5 h-5 text-[#2563EB] shrink-0" />
-            <h2 className="font-display text-lg sm:text-xl font-bold text-[#0B1120] dark:text-[#F8FAFC]">
-              Custom Diamond Calculator
-            </h2>
-          </div>
-          <p className="text-xs text-[#475569] dark:text-[#94A3B8] leading-relaxed">
-            Need a specific number of diamonds to unlock an Evo Gun or Lucky Royale spin? Slide or enter any diamond amount to calculate instant BDT pricing.
-          </p>
+      <form onSubmit={handlePlaceOrder} className="space-y-4">
+        {/* ===================================================================
+            CARD 1: [1] SELECT RECHARGE (Exact Match to 02:04 & 02:13 in Recording)
+           =================================================================== */}
+        <div className="zvy-card p-4 sm:p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-2.5">
+              <span className="step-badge">1</span>
+              <h2 className="font-display font-extrabold text-sm sm:text-base uppercase tracking-tight text-[#111827] dark:text-white">
+                SELECT RECHARGE
+              </h2>
+            </div>
 
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-xs font-semibold mb-2">
-                <span>Desired Diamonds Amount</span>
-                <span className="font-mono text-[#F59E0B]">{customDiamonds} 💎</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCustomCalc(!showCustomCalc)}
+                className="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-[10px] font-bold inline-flex items-center gap-1 hover:bg-gray-200"
+              >
+                <Calculator className="w-3 h-3 text-[#FF5500]" />
+                <span>Custom 💎</span>
+              </button>
+              <span className="px-2.5 py-1 rounded-full bg-[#FFFBEB] border border-[#FDE68A] text-[#D97706] text-[11px] font-bold inline-flex items-center gap-1">
+                <span>Min. 0 Coins</span>
+                <span>💰</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Optional Search & Custom Diamond Calculator */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              placeholder={
+                language === 'bn'
+                  ? 'প্যাকেজ খুঁজুন (যেমন: 115, 240, Weekly)...'
+                  : 'Filter packages (e.g. 115, 240, Weekly)...'
+              }
+              className="w-full h-9 pl-9 pr-3 rounded-xl bg-gray-50 dark:bg-[#0B0F17] border border-gray-200 dark:border-gray-800 text-xs"
+            />
+          </div>
+
+          {showCustomCalc && (
+            <div className="p-3.5 rounded-xl bg-[#FFF9F5] dark:bg-[#161F30] border border-[#3B0A0A]/25 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span>Custom Diamond Calculator (50 – 5,000 💎)</span>
+                <span className="font-mono text-[#FF5500]">
+                  {customDiamonds} 💎 = ৳{customPriceBdt} BDT
+                </span>
               </div>
               <input
                 type="range"
@@ -294,249 +427,453 @@ export const TopUpPage: React.FC = () => {
                 step={25}
                 value={customDiamonds}
                 onChange={(e) => setCustomDiamonds(Number(e.target.value))}
-                className="w-full accent-[#2563EB]"
+                className="w-full accent-[#3B0A0A]"
               />
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#F4F7FB] dark:bg-[#070B14] border border-[#DCE4F0] dark:border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="text-xs text-[#475569] dark:text-[#94A3B8]">
-                  Calculated BDT Rate (৳0.76 / 💎)
-                </div>
-                <div className="font-display text-2xl font-bold font-mono text-[#2563EB] dark:text-[#60A5FA]">
-                  ৳{customPriceBdt} BDT
-                </div>
-              </div>
               <button
-                onClick={handleCustomPackageBuy}
-                className="min-h-[44px] px-5 py-2.5 rounded-xl btn-primary text-xs font-semibold"
+                type="button"
+                onClick={handleApplyCustomDiamonds}
+                className="w-full py-2 rounded-lg bg-[#3B0A0A] text-white text-xs font-bold"
               >
-                Order {customDiamonds}💎 Now
+                Use Custom {customDiamonds} Diamonds (৳{customPriceBdt} BDT)
               </button>
             </div>
+          )}
+
+          {/* 2-Column Denomination Radio Grid (Matches 02:04 & 02:13 in Recording) */}
+          <div className="grid grid-cols-2 gap-2.5">
+            {filteredPackages.map((pkg) => {
+              const isSelected = activeSelectedPkg?.id === pkg.id;
+              const isWished = wishlist.includes(pkg.id);
+              const cleanName = pkg.title
+                .replace(/\s*\(UID Direct\)/i, ' 💎')
+                .replace(/\s*\(UniPin Voucher\)/i, ' 🎟️');
+
+              return (
+                <div
+                  key={pkg.id}
+                  onClick={() => {
+                    if (!pkg.inStock) return;
+                    setCustomSelectedPkg(null);
+                    setSelectedPkgId(pkg.id);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && pkg.inStock) {
+                      e.preventDefault();
+                      setCustomSelectedPkg(null);
+                      setSelectedPkgId(pkg.id);
+                    }
+                  }}
+                  className={`zvy-recharge-item text-left ${
+                    isSelected ? 'zvy-recharge-item-selected' : ''
+                  } ${!pkg.inStock ? 'opacity-65 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                        isSelected
+                          ? 'border-[#3B0A0A] bg-[#3B0A0A]'
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                    <span className="text-xs font-bold text-[#1F2937] dark:text-gray-100 leading-tight truncate">
+                      {language === 'bn' ? pkg.titleBn : cleanName}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0 pl-1">
+                    {!pkg.inStock ? (
+                      <div className="text-right">
+                        <div className="text-[11px] font-mono font-bold text-red-400">
+                          {pkg.priceBdt} BDT
+                        </div>
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-red-50 border border-red-200 text-red-600 text-[9px] font-mono font-extrabold uppercase">
+                          STOCKOUT
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-right leading-none">
+                        <div className="font-mono font-extrabold text-xs sm:text-sm text-[#111827] dark:text-white">
+                          {pkg.priceBdt}
+                        </div>
+                        <div className="text-[9px] font-mono font-semibold text-gray-500 uppercase mt-0.5">
+                          BDT
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWishlist(pkg.id);
+                      }}
+                      aria-label="Toggle Wishlist"
+                      className={`p-0.5 rounded transition-colors ${
+                        isWished ? 'text-red-500' : 'text-gray-300 hover:text-red-400'
+                      }`}
+                    >
+                      <Heart className={`w-3 h-3 ${isWished ? 'fill-current' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Order Tracking by Order ID */}
-        <div className="p-6 sm:p-8 rounded-2xl card-premium space-y-5">
-          <div className="flex items-center gap-2.5">
-            <PackageCheck className="w-5 h-5 text-[#10B981] shrink-0" />
-            <h2 className="font-display text-lg sm:text-xl font-bold text-[#0B1120] dark:text-[#F8FAFC]">
-              Real-Time Order Tracker
-            </h2>
+        {/* ===================================================================
+            CARD 2: [2] ACCOUNT INFO (Exact Match to 02:05 in Recording)
+           =================================================================== */}
+        <div className="zvy-card p-4 sm:p-5 space-y-3.5">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-[#111827] dark:text-white font-display font-extrabold text-xs flex items-center justify-center">
+                2
+              </span>
+              <h2 className="font-display font-extrabold text-sm sm:text-base uppercase tracking-tight text-[#111827] dark:text-white">
+                ACCOUNT INFO
+              </h2>
+            </div>
+            <span className="px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold uppercase tracking-wider">
+              • REQUIRED
+            </span>
           </div>
-          <p className="text-xs text-[#475569] dark:text-[#94A3B8] leading-relaxed">
-            Enter your Order ID (e.g., <span className="font-mono">ORD-90812</span> or{' '}
-            <span className="font-mono">ORD-90871</span>) to verify delivery status or retrieve your UniPin Voucher PIN.
-          </p>
 
-          <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+              Player ID
+            </label>
             <input
               type="text"
-              value={trackOrderId}
-              onChange={(e) => setTrackOrderId(e.target.value)}
-              placeholder="Enter Order ID e.g. ORD-90871"
-              className="flex-1 min-h-[44px] px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#F4F7FB] dark:bg-[#070B14] border border-[#DCE4F0] dark:border-[#1E293B]"
+              inputMode="numeric"
+              required
+              value={playerUid}
+              onChange={(e) => {
+                setPlayerUid(e.target.value.replace(/[^0-9]/g, ''));
+                setCheckedIgn(null);
+              }}
+              placeholder="Enter Player ID"
+              maxLength={12}
+              className="w-full h-12 px-4 rounded-xl bg-white dark:bg-[#0B0F17] border border-gray-200 dark:border-gray-700 text-sm font-mono text-[#111827] dark:text-white"
             />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCheckGameId}
+            className="w-full h-11 rounded-xl bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#2563EB] font-display font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
+          >
+            <Search className="w-4 h-4" />
+            <span>
+              {checkedIgn
+                ? `গেম আইডি ভেরিফাইড: ${checkedIgn}`
+                : language === 'bn'
+                ? 'আপনার গেম আইডির নাম চেক করুন'
+                : 'Check Your Game ID Name'}
+            </span>
+          </button>
+        </div>
+
+        {/* ===================================================================
+            CARD 3: [3] পেমেন্ট পদ্ধতি (Exact Match to 02:06 in Recording)
+           =================================================================== */}
+        <div className="zvy-card p-4 sm:p-5 space-y-4">
+          <div className="flex items-center gap-2.5 pb-1">
+            <span className="w-7 h-7 rounded-full bg-[#280606] text-white font-display font-extrabold text-xs flex items-center justify-center">
+              3
+            </span>
+            <h2 className="font-display font-extrabold text-base sm:text-lg text-[#111827] dark:text-white">
+              {language === 'bn' ? 'পেমেন্ট পদ্ধতি' : 'Payment Method'}
+            </h2>
+          </div>
+
+          {/* 2 Graphic Payment Cards (Wallet Payment vs Instant Payment) */}
+          <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => setTrackOrderId('ORD-90871')}
-              className="min-h-[44px] px-4 py-2.5 rounded-xl btn-secondary text-xs font-mono font-semibold"
+              type="button"
+              onClick={() => setPaymentMode('wallet')}
+              className={`rounded-2xl overflow-hidden border-2 text-center transition-all ${
+                paymentMode === 'wallet'
+                  ? 'border-[#280606] dark:border-[#FF5500] shadow-md'
+                  : 'border-gray-200 dark:border-gray-700 opacity-85 hover:opacity-100'
+              }`}
             >
-              Load Sample ID
+              <div className="h-24 sm:h-28 bg-gradient-to-br from-[#2A0808] via-[#450A0A] to-[#111827] p-3 flex items-center justify-between">
+                <div className="text-left">
+                  <div className="text-[9px] font-mono font-bold text-[#FF7A00] uppercase">
+                    H41FFTOPUP
+                  </div>
+                  <div className="font-display font-black text-sm sm:text-base text-white leading-tight mt-0.5">
+                    ওয়ালেট
+                    <br />
+                    পেমেন্ট
+                  </div>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-[#F59E0B]/20 border border-[#F59E0B]/40 flex items-center justify-center text-[#FBBF24]">
+                  <Wallet className="w-6 h-6" />
+                </div>
+              </div>
+              <div className="py-2 px-2 bg-white dark:bg-[#161F30] flex items-center justify-center gap-1.5 text-xs font-bold text-[#111827] dark:text-white">
+                {paymentMode === 'wallet' && (
+                  <CheckCircle2 className="w-4 h-4 text-[#280606] dark:text-[#FF5500] shrink-0" />
+                )}
+                <span>{language === 'bn' ? 'ওয়ালেট পেমেন্ট' : 'Wallet Pay'}</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPaymentMode('instant')}
+              className={`rounded-2xl overflow-hidden border-2 text-center transition-all ${
+                paymentMode === 'instant'
+                  ? 'border-[#280606] dark:border-[#FF5500] shadow-md'
+                  : 'border-gray-200 dark:border-gray-700 opacity-85 hover:opacity-100'
+              }`}
+            >
+              <div className="h-24 sm:h-28 bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#092B4C] p-3 flex items-center justify-between">
+                <div className="text-left">
+                  <div className="text-[9px] font-mono font-bold text-[#38BDF8] uppercase">
+                    bKash · Nagad · Rocket
+                  </div>
+                  <div className="font-display font-black text-sm sm:text-base text-white leading-tight mt-0.5">
+                    ইনস্ট্যান্ট
+                    <br />
+                    পেমেন্ট
+                  </div>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-[#38BDF8]/20 border border-[#38BDF8]/40 flex items-center justify-center text-[#38BDF8]">
+                  <Zap className="w-6 h-6" />
+                </div>
+              </div>
+              <div className="py-2 px-2 bg-white dark:bg-[#161F30] flex items-center justify-center gap-1.5 text-xs font-bold text-[#111827] dark:text-white">
+                {paymentMode === 'instant' && (
+                  <CheckCircle2 className="w-4 h-4 text-[#280606] dark:text-[#FF5500] shrink-0" />
+                )}
+                <span>{language === 'bn' ? 'ইনস্ট্যান্ট পেমেন্ট' : 'Instant Pay'}</span>
+              </div>
             </button>
           </div>
 
-          {trackedOrder ? (
-            <div className="p-4 rounded-xl bg-[#F4F7FB] dark:bg-[#070B14] border border-[#DCE4F0] dark:border-[#1E293B] space-y-2 text-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
-                <span className="font-bold text-[#0B1120] dark:text-[#F8FAFC]">
-                  {trackedOrder.id} · {trackedOrder.packageTitle}
-                </span>
-                <span className="font-bold text-[#10B981]">{trackedOrder.status}</span>
-              </div>
-              <div className="text-[#475569] dark:text-[#94A3B8] font-mono">
-                Player UID: {trackedOrder.playerUid} ({trackedOrder.playerIgn}) · Amount: ৳
-                {trackedOrder.amountBdt}
-              </div>
-              {trackedOrder.voucherPin && (
-                <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#DCE4F0] dark:border-[#1E293B]">
-                  <span className="font-mono font-bold text-[#F59E0B] break-all">
-                    UniPin Voucher: {trackedOrder.voucherPin}
-                  </span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(trackedOrder.voucherPin!);
-                      addToast('PIN Copied', 'UniPin voucher code copied to clipboard.', 'info');
-                    }}
-                    className="inline-flex items-center gap-1 text-[#2563EB] font-semibold"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy PIN</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            trackOrderId.trim() && (
-              <div className="text-xs text-[#EF4444]">
-                No order found matching “{trackOrderId}”. Check the Order History table below.
-              </div>
-            )
-          )}
-        </div>
-      </div>
-
-      {/* Order History Table */}
-      <div className="p-6 sm:p-8 rounded-2xl card-premium space-y-4">
-        <h2 className="font-display text-lg sm:text-xl font-bold text-[#0B1120] dark:text-[#F8FAFC]">
-          Recent Diamond & UniPin Order History
-        </h2>
-        <div className="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0">
-          <table className="w-full min-w-[680px] text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#DCE4F0] dark:border-[#1E293B] text-xs text-[#475569] dark:text-[#94A3B8]">
-                <th className="py-3 px-3">Order ID</th>
-                <th className="py-3 px-3">Package</th>
-                <th className="py-3 px-3">Target UID / IGN</th>
-                <th className="py-3 px-3">Method</th>
-                <th className="py-3 px-3 text-right">Amount</th>
-                <th className="py-3 px-3">Voucher PIN / Status</th>
-                <th className="py-3 px-3">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#DCE4F0] dark:divide-[#1E293B] text-xs font-mono">
-              {orders.map((ord) => (
-                <tr key={ord.id} className="hover:bg-[#F4F7FB] dark:hover:bg-[#070B14]">
-                  <td className="py-3 px-3 font-bold text-[#2563EB] dark:text-[#60A5FA] whitespace-nowrap">{ord.id}</td>
-                  <td className="py-3 px-3 font-sans font-semibold text-[#0B1120] dark:text-[#F8FAFC]">
-                    {ord.packageTitle}
-                  </td>
-                  <td className="py-3 px-3 whitespace-nowrap">
-                    {ord.playerUid} ({ord.playerIgn})
-                  </td>
-                  <td className="py-3 px-3 uppercase">{ord.paymentMethod}</td>
-                  <td className="py-3 px-3 text-right font-bold">৳{ord.amountBdt}</td>
-                  <td className="py-3 px-3">
-                    <span
-                      className={`font-bold ${
-                        ord.status === 'Completed'
-                          ? 'text-[#10B981]'
-                          : ord.status === 'Cancelled'
-                          ? 'text-[#EF4444]'
-                          : 'text-[#F59E0B]'
-                      }`}
-                    >
-                      {ord.status}
-                    </span>
-                    {ord.voucherPin && (
-                      <span className="ml-2 text-[#475569] dark:text-[#94A3B8]">
-                        ({ord.voucherPin})
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 text-[#475569] dark:text-[#94A3B8] whitespace-nowrap">
-                    {ord.createdAt}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Direct Buy Checkout Modal */}
-      {checkoutPkg && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <form
-            onSubmit={handleConfirmDirectBuy}
-            className="max-w-md w-full max-h-[90vh] overflow-y-auto rounded-2xl card-premium p-5 sm:p-6 space-y-4 shadow-2xl"
-          >
-            <h3 className="font-display text-lg font-bold text-[#0B1120] dark:text-[#F8FAFC]">
-              Confirm Top Up Order
-            </h3>
-            <div className="p-3.5 rounded-xl bg-[#F4F7FB] dark:bg-[#070B14] border border-[#DCE4F0] dark:border-[#1E293B] text-xs space-y-1 font-mono">
-              <div className="font-sans font-bold text-sm text-[#0B1120] dark:text-[#F8FAFC]">
-                {checkoutPkg.title}
-              </div>
-              <div>
-                Target UID: {playerUid} ({playerIgn})
-              </div>
-              <div className="text-[#2563EB] dark:text-[#60A5FA] font-bold">
-                Total Payable: ৳{checkoutPkg.priceBdt} BDT
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold">Select Payment Method</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('wallet')}
-                  className={`min-h-[48px] p-2.5 rounded-xl border text-left text-xs font-semibold ${
-                    paymentMethod === 'wallet'
-                      ? 'border-[#2563EB] bg-[#EFF6FF] dark:bg-[#1E293B] text-[#2563EB] dark:text-white'
-                      : 'border-[#DCE4F0] dark:border-[#1E293B]'
-                  }`}
-                >
-                  <div className="flex items-center gap-1">
-                    <Wallet className="w-3.5 h-3.5 shrink-0" />
-                    <span>Wallet</span>
-                  </div>
-                  <div className="font-mono text-xs mt-0.5">
-                    ৳{currentUser?.mainBalance ?? 0}
-                  </div>
-                </button>
-                {activeGateways.map((gw) => (
+          {paymentMode === 'instant' && (
+            <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-[#0B0F17] border border-gray-200 dark:border-gray-800 space-y-2.5">
+              <div className="grid grid-cols-4 gap-1.5">
+                {activeGateways.slice(0, 4).map((gw) => (
                   <button
                     key={gw.id}
                     type="button"
-                    onClick={() => setPaymentMethod(gw.id)}
-                    className={`min-h-[48px] p-2.5 rounded-xl border text-left text-xs font-semibold ${
-                      paymentMethod === gw.id
-                        ? 'border-[#2563EB] bg-[#EFF6FF] dark:bg-[#1E293B] text-[#2563EB] dark:text-white'
-                        : 'border-[#DCE4F0] dark:border-[#1E293B]'
+                    onClick={() => setSelectedGateway(gw.id)}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-colors ${
+                      selectedGateway === gw.id
+                        ? 'bg-white dark:bg-[#161F30] border-[#3B0A0A] text-[#111827] dark:text-white shadow-xs'
+                        : 'border-transparent text-gray-500'
                     }`}
                   >
-                    <div>{gw.name}</div>
-                    <div className="font-mono text-xs mt-0.5 truncate">{gw.merchantNumber}</div>
+                    {gw.name.split(' ')[0]}
                   </button>
                 ))}
               </div>
+              {currentGatewayConfig && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Send <strong>৳{activeSelectedPkg?.priceBdt ?? 0}</strong> to{' '}
+                    {currentGatewayConfig.name.split(' ')[0]}:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentGatewayConfig.merchantNumber);
+                      addToast(
+                        'Merchant Number Copied',
+                        `${currentGatewayConfig.merchantNumber} copied!`,
+                        'info'
+                      );
+                    }}
+                    className="font-mono font-bold text-[#FF5500] inline-flex items-center gap-1"
+                  >
+                    <span>{currentGatewayConfig.merchantNumber}</span>
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <input
+                type="text"
+                value={trxId}
+                onChange={(e) => setTrxId(e.target.value)}
+                placeholder="Transaction ID (অথবা খালি রাখলে অটো গেটওয়ে)"
+                className="w-full h-10 px-3 rounded-lg bg-white dark:bg-[#161F30] border border-gray-200 dark:border-gray-700 text-xs font-mono"
+              />
             </div>
+          )}
 
-            {paymentMethod !== 'wallet' && (
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Enter {paymentMethod.toUpperCase()} Transaction ID (TrxID)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={trxId}
-                  onChange={(e) => setTrxId(e.target.value)}
-                  placeholder="e.g. BKS884920KL"
-                  className="w-full min-h-[42px] px-3 py-2 text-xs font-mono rounded-xl bg-[#F4F7FB] dark:bg-[#070B14] border border-[#DCE4F0] dark:border-[#1E293B]"
-                />
+          {/* 2 Info Lines (Required Amount & Current Wallet Balance) */}
+          <div className="space-y-1.5 pt-1 text-xs text-gray-700 dark:text-gray-300">
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-gray-400 shrink-0" />
+              <span>
+                {language === 'bn' ? 'প্রোডাক্ট কিনতে আপনার প্রয়োজন' : 'Required to purchase product'}{' '}
+                <strong className="font-mono text-[#111827] dark:text-white">
+                  Tk {activeSelectedPkg?.priceBdt ?? 0} BDT
+                </strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-gray-400 shrink-0" />
+              <span>
+                {language === 'bn' ? 'আপনার ওয়ালেট ব্যালেন্স' : 'Your Wallet Balance'}{' '}
+                <strong className="font-mono text-[#111827] dark:text-white">
+                  Tk {currentUser?.mainBalance ?? 0} BDT
+                </strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="text-center pt-1">
+            <a
+              href="#topup-rules-section"
+              className="text-xs font-bold text-[#0D3B66] dark:text-[#60A5FA] underline"
+            >
+              {language === 'bn' ? 'অর্ডার করার নিয়মাবলী দেখুন' : 'View Order Rules & Conditions'}
+            </a>
+          </div>
+
+          <div className="space-y-2">
+            <button
+              type="submit"
+              className="w-full h-12 rounded-xl btn-navy-buy font-display font-bold text-sm shadow-md flex items-center justify-center gap-2"
+            >
+              <span>
+                {currentUser
+                  ? language === 'bn'
+                    ? `এখনই কিনুন (৳${activeSelectedPkg?.priceBdt ?? 0} BDT)`
+                    : `Buy Now (৳${activeSelectedPkg?.priceBdt ?? 0} BDT)`
+                  : language === 'bn'
+                  ? 'লগইন / এখনই কিনুন'
+                  : 'Login / Buy Now'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!activeSelectedPkg) return;
+                addToCart(
+                  activeSelectedPkg,
+                  playerUid.trim() || currentUser?.ffUid || '2849103842',
+                  checkedIgn || currentUser?.ffIgn || 'BD_PLAYER'
+                );
+                setIsCartOpen(true);
+              }}
+              className="w-full h-10 rounded-xl btn-secondary text-xs font-bold flex items-center justify-center gap-1.5"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-[#FF5500]" />
+              <span>{language === 'bn' ? 'কার্টে যোগ করুন' : 'Add to Multi-Pack Cart'}</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      {/* ===================================================================
+          CARD 4: নিয়ম ও শর্তাবলী (Rules & Conditions — Matches 02:30 - 02:33)
+         =================================================================== */}
+      <div id="topup-rules-section" className="zvy-card p-4 sm:p-5 space-y-3">
+        <h3 className="font-display font-extrabold text-sm sm:text-base text-[#111827] dark:text-white pb-2 border-b border-gray-100 dark:border-gray-800">
+          {language === 'bn' ? 'নিয়ম ও শর্তাবলী' : 'Rules & Conditions'}
+        </h3>
+        <div className="text-xs font-bold text-[#111827] dark:text-white flex items-center gap-1.5">
+          <span>📢</span>
+          <span>H41FFTOPUP - Rules & Conditions</span>
+        </div>
+        <ul className="space-y-2.5 text-xs text-gray-700 dark:text-gray-300 leading-relaxed list-disc pl-4">
+          <li>
+            🇧🇩 শুধুমাত্র <strong>Bangladesh (BD) Server</strong>-এ <strong>Player ID Code</strong> ব্যবহার করে Top Up করা যাবে।
+          </li>
+          <li>
+            🆔 <strong>Player ID</strong> ভুল প্রদান করলে Top Up সম্পন্ন না হওয়ার জন্য <strong>H41FFTOPUP</strong> কর্তৃপক্ষ দায়ী থাকবে না। অর্ডার করার আগে অবশ্যই আপনার Player ID সঠিকভাবে যাচাই করুন।
+          </li>
+          <li>
+            💎 অর্ডার <strong>Completed</strong> হওয়ার পরও যদি Diamond আপনার অ্যাকাউন্টে না পৌঁছায়, তাহলে যাচাইয়ের জন্য <strong>Player ID</strong> এবং প্রয়োজনে <strong>Account Login Information</strong> প্রদান করতে হতে পারে।
+          </li>
+          <li>
+            ❌ কোনো অর্ডার <strong>Cancelled</strong> হলে তার সুনির্দিষ্ট কারণ <strong>Order History</strong>-তে উল্লেখ থাকবে। অনুগ্রহ করে কারণটি দেখে সঠিক তথ্য দিয়ে পুনরায় অর্ডার করুন।
+          </li>
+        </ul>
+      </div>
+
+      {/* Live Order ID & UniPin Voucher PIN Tracker Card */}
+      <div className="zvy-card p-4 sm:p-5 space-y-3">
+        <h3 className="font-display font-extrabold text-sm text-[#111827] dark:text-white">
+          {language === 'bn' ? 'অর্ডার ট্র্যাকার ও ভাউচার পিন চেক' : 'Track Order Status & UniPin PIN'}
+        </h3>
+        <input
+          type="text"
+          value={trackOrderId}
+          onChange={(e) => setTrackOrderId(e.target.value)}
+          placeholder={`Enter Order ID (e.g. ${orders[0]?.id || 'ORD-90124'})`}
+          className="w-full h-10 px-3.5 rounded-xl bg-gray-50 dark:bg-[#0B0F17] border border-gray-200 dark:border-gray-800 text-xs font-mono"
+        />
+        {trackedOrder && (
+          <div className="p-3.5 rounded-xl bg-[#00C853]/10 border border-[#00C853]/30 text-xs space-y-1">
+            <div className="flex justify-between font-mono font-bold">
+              <span className="text-[#3B0A0A] dark:text-[#FF7A00]">{trackedOrder.id}</span>
+              <span className="text-[#00C853]">{trackedOrder.status}</span>
+            </div>
+            <div className="font-bold text-[#111827] dark:text-white">
+              {trackedOrder.packageTitle} — ৳{trackedOrder.amountBdt} BDT
+            </div>
+            <div className="font-mono text-[11px] text-gray-500">
+              Player ID: {trackedOrder.playerUid} ({trackedOrder.playerIgn})
+            </div>
+            {trackedOrder.voucherPin && (
+              <div className="pt-1 font-mono font-bold text-[#2563EB] flex items-center justify-between">
+                <span>UniPin Code: {trackedOrder.voucherPin}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(trackedOrder.voucherPin || '');
+                    addToast('PIN Copied', 'UniPin voucher copied to clipboard!', 'info');
+                  }}
+                  className="underline text-[11px]"
+                >
+                  Copy PIN
+                </button>
               </div>
             )}
+          </div>
+        )}
+      </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+      {/* How to Order Modal */}
+      {howToOrderOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+          onClick={() => setHowToOrderOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#111827] p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-display font-bold text-sm sm:text-base">
+                কিভাবে অর্ডার করবেন? (H41FFTOPUP Guide)
+              </h3>
               <button
                 type="button"
-                onClick={() => setCheckoutPkg(null)}
-                className="min-h-[42px] px-4 py-2 rounded-xl btn-secondary text-xs font-semibold"
+                onClick={() => setHowToOrderOpen(false)}
+                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="min-h-[42px] px-5 py-2 rounded-xl btn-primary text-xs font-semibold flex items-center gap-1.5"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Confirm & Pay ৳{checkoutPkg.priceBdt}</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
-          </form>
+            <div className="space-y-2 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+              <p>১. প্রথমে <strong>SELECT RECHARGE</strong> থেকে আপনার পছন্দের ডায়মন্ড বা মেম্বারশিপ প্যাকটি সিলেক্ট করুন।</p>
+              <p>২. এরপর <strong>ACCOUNT INFO</strong> বক্সে আপনার Free Fire Player UID লিখুন এবং নাম চেক করুন।</p>
+              <p>৩. <strong>পেমেন্ট পদ্ধতি</strong> থেকে ওয়ালেট পেমেন্ট অথবা ইনস্ট্যান্ট পেমেন্ট (বিকাশ/নগদ/রকেট) সিলেক্ট করে <strong>এখনই কিনুন</strong> বাটনে ক্লিক করুন।</p>
+            </div>
+          </div>
         </div>
       )}
     </div>

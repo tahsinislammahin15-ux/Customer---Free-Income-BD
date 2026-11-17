@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://freeincomebd.com/</loc><priority>1.0</priority><changefreq>daily</changefreq></url>
-  <url><loc>https://freeincomebd.com/topup</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
-  <url><loc>https://freeincomebd.com/tournaments</loc><priority>0.9</priority><changefreq>hourly</changefreq></url>
-  <url><loc>https://freeincomebd.com/income</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
-  <url><loc>https://freeincomebd.com/leaderboard</loc><priority>0.8</priority><changefreq>daily</changefreq></url>
-  <url><loc>https://freeincomebd.com/about</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://freeincomebd.com/contact</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://freeincomebd.com/faq</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
-  <url><loc>https://freeincomebd.com/privacy</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
-  <url><loc>https://freeincomebd.com/terms</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://h41fftopup.com/</loc><priority>1.0</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://h41fftopup.com/topup</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://h41fftopup.com/offers</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://h41fftopup.com/tournaments</loc><priority>0.9</priority><changefreq>hourly</changefreq></url>
+  <url><loc>https://h41fftopup.com/income</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://h41fftopup.com/leaderboard</loc><priority>0.8</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://h41fftopup.com/about</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://h41fftopup.com/contact</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://h41fftopup.com/faq</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://h41fftopup.com/privacy</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://h41fftopup.com/terms</loc><priority>0.5</priority><changefreq>monthly</changefreq></url>
 </urlset>

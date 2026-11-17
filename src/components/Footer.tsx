@@ -1,244 +1,156 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, MapPin, Phone, Mail, Send, Lock } from 'lucide-react';
+import { Globe, Send, Flame, Lock } from 'lucide-react';
 import { PUBLIC_ENV } from '../config/env';
 import { useApp } from '../context/AppContext';
 import { sanitizeSafeUrl } from '../utils/security';
 
 export const Footer: React.FC = () => {
-  const { siteSettings, addToast } = useApp();
-  const [email, setEmail] = useState('');
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    addToast(
-      'Alert Subscription Active',
-      `We will notify ${email.trim()} when Free Entry Custom Rooms and Weekly Pass offers go live.`,
-      'success'
-    );
-    setEmail('');
-  };
+  const { siteSettings, language, setLanguage } = useApp();
 
   return (
-    <footer className="bg-white dark:bg-[#080E1B] border-t border-[#E2E8F0] dark:border-[#1E2D4A] mt-20">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10">
-          {/* Col 1: Brand & Trust Charter */}
-          <div className="lg:col-span-4 space-y-4">
-            <Link to="/" className="flex items-center gap-2.5 group w-fit">
-              {siteSettings.logoUrl ? (
-                <img
-                  src={siteSettings.logoUrl}
-                  alt={siteSettings.siteName}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  className="w-10 h-10 rounded-xl object-cover border border-[#E2E8F0] dark:border-[#1E2D4A]"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-xl btn-primary flex items-center justify-center text-white font-display font-extrabold text-sm">
-                  FIBD
-                </div>
-              )}
-              <div>
-                <div className="font-display font-bold text-base text-[#0F172A] dark:text-[#F8FAFC]">
-                  {siteSettings.siteName}
-                </div>
-                <div className="text-xs text-[#475569] dark:text-[#94A3B8]">
-                  {siteSettings.tagline}
-                </div>
+    <footer className="bg-[#230505] text-white border-t border-[#3D1414] mt-12 pt-10 pb-14 px-4">
+      <div className="max-w-3xl mx-auto flex flex-col items-center text-center space-y-6">
+        {/* 1. Stacked Telegram Support & Channel Cards (Matches 00:44 - 00:46 in Recording) */}
+        <div className="w-full max-w-xs space-y-3">
+          <a
+            href={sanitizeSafeUrl(siteSettings.telegramUrl) || PUBLIC_ENV.TELEGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full rounded-2xl bg-[#15192B] hover:bg-[#1B2038] border border-[#262F52] px-4 py-3.5 flex items-center gap-3.5 text-left transition-colors shadow-md"
+          >
+            <div className="w-10 h-10 rounded-full bg-[#0284C7]/20 border border-[#38BDF8]/40 text-[#38BDF8] flex items-center justify-center shrink-0">
+              <Send className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#38BDF8]">
+                24/7 SUPPORT
               </div>
-            </Link>
-
-            <p className="text-xs sm:text-sm text-[#475569] dark:text-[#94A3B8] leading-relaxed">
-              Bangladesh’s trusted 3-in-1 Free Fire Diamond & UniPin Top Up center, moderated custom room tournament arena, and transparent online micro-task platform.
-            </p>
-
-            <div className="space-y-2 text-xs text-[#475569] dark:text-[#94A3B8]">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#2563EB] dark:text-[#60A5FA] shrink-0" />
-                <span>{siteSettings.officeAddress}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-[#10B981] shrink-0" />
-                <span className="font-mono">WhatsApp: {siteSettings.supportWhatsapp}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#F59E0B] shrink-0" />
-                <span className="font-mono">{siteSettings.supportEmail}</span>
+              <div className="font-display font-bold text-sm text-white">
+                Telegram Support
               </div>
             </div>
-          </div>
+          </a>
 
-          {/* Col 2: Gaming, Esports & Rewards Pages */}
-          <div className="lg:col-span-2 space-y-3">
-            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-[#F8FAFC]">
-              Platform Pages
-            </h3>
-            <ul className="space-y-2 text-xs sm:text-sm text-[#475569] dark:text-[#94A3B8]">
-              <li>
-                <Link to="/topup" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                  Diamond Top Up Store
-                </Link>
-              </li>
-              <li>
-                <Link to="/offers" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                  Special Offers & VIP Passes
-                </Link>
-              </li>
-              <li>
-                <Link to="/tournaments" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                  Esports Custom Rooms
-                </Link>
-              </li>
-              <li>
-                <Link to="/income" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                  Free Income Tasks
-                </Link>
-              </li>
-              <li>
-                <Link to="/leaderboard" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                  Top Winners & Leaderboard
-                </Link>
-              </li>
-              <li>
-                <Link to="/blog" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                  Esports Blog & Guides
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Col 3: Account, Community & Legal Pages */}
-          <div className="lg:col-span-3 space-y-3">
-            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-[#F8FAFC]">
-              Player Wallet & Help Center
-            </h3>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:text-sm text-[#475569] dark:text-[#94A3B8]">
-              <Link to="/account" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                My Account
-              </Link>
-              <Link to="/reviews" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Player Reviews
-              </Link>
-              <Link to="/wallet" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Fintech Wallet
-              </Link>
-              <Link to="/faq" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Help & FAQ
-              </Link>
-              <Link to="/deposit" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Deposit BDT
-              </Link>
-              <Link to="/contact" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Contact Desk
-              </Link>
-              <Link to="/withdraw" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Withdraw BDT
-              </Link>
-              <Link to="/about" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                About Us
-              </Link>
-              <Link to="/transactions" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Ledger History
-              </Link>
-              <Link to="/privacy" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Privacy Policy
-              </Link>
-              <Link to="/profile" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                UID Profile
-              </Link>
-              <Link to="/terms" className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">
-                Terms & Rules
-              </Link>
+          <a
+            href={sanitizeSafeUrl(siteSettings.telegramUrl) || PUBLIC_ENV.TELEGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full rounded-2xl bg-[#15192B] hover:bg-[#1B2038] border border-[#262F52] px-4 py-3.5 flex items-center gap-3.5 text-left transition-colors shadow-md"
+          >
+            <div className="w-10 h-10 rounded-full bg-[#0284C7]/20 border border-[#38BDF8]/40 text-[#38BDF8] flex items-center justify-center shrink-0">
+              <Send className="w-4 h-4" />
             </div>
-          </div>
-
-          {/* Col 4: Newsletter & Verified Gateways */}
-          <div className="lg:col-span-3 space-y-4">
-            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-[#F8FAFC]">
-              Tournament & Offer Alerts
-            </h3>
-            <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
-              Get notified when Free Entry Custom Rooms and discounted Weekly Memberships go live.
-            </p>
-            <form onSubmit={handleSubscribe} className="flex gap-2">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email..."
-                className="flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0D1526] border border-[#E2E8F0] dark:border-[#1E2D4A] text-[#0F172A] dark:text-[#F8FAFC]"
-              />
-              <button
-                type="submit"
-                className="px-3.5 py-2 rounded-xl btn-primary text-xs font-semibold flex items-center gap-1 shrink-0"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Join</span>
-              </button>
-            </form>
-
-            <div className="pt-2 space-y-1.5">
-              <div className="text-[11px] font-medium text-[#475569] dark:text-[#94A3B8]">
-                Supported Bangladesh Mobile Banking:
+            <div>
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#38BDF8]">
+                TELEGRAM CHANNEL
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs font-mono font-semibold">
-                <span className="text-[#E2136E]">bKash</span>
-                <span className="text-[#94A3B8]">·</span>
-                <span className="text-[#F7941D]">Nagad</span>
-                <span className="text-[#94A3B8]">·</span>
-                <span className="text-[#8C3494]">Rocket</span>
-                <span className="text-[#94A3B8]">·</span>
-                <span className="text-[#006A4E]">Upay</span>
-                <span className="text-[#94A3B8]">·</span>
-                <span className="text-[#2563EB] dark:text-[#60A5FA]">UniPin BD</span>
+              <div className="font-display font-bold text-sm text-white">
+                Join Now
               </div>
             </div>
-          </div>
+          </a>
         </div>
 
-        {/* Bottom Copyright & Security Note */}
-        <div className="mt-10 pt-6 border-t border-[#E2E8F0] dark:border-[#1E2D4A] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#475569] dark:text-[#94A3B8]">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-            <span>
-              © {new Date().getFullYear()} {siteSettings.siteName}. All rights reserved. Zero Game Password Required.
-            </span>
+        {/* 2. Centered H41FFTOPUP Metallic Flame Logo */}
+        <Link to="/" className="inline-flex items-center gap-2 pt-2">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-b from-[#FF7A00] to-[#D91B00] p-[1.5px]">
+            <div className="w-full h-full rounded-[6px] bg-[#1E0404] flex items-center justify-center">
+              <Flame className="w-5 h-5 text-[#FF5500] fill-[#FF5500]" />
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4">
-            <a
-              href={sanitizeSafeUrl(siteSettings.facebookUrl) || PUBLIC_ENV.FACEBOOK_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors"
-            >
-              Facebook Community
-            </a>
-            <a
-              href={sanitizeSafeUrl(siteSettings.telegramUrl) || PUBLIC_ENV.TELEGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors"
-            >
-              Telegram Channel
-            </a>
-            <a
-              href={sanitizeSafeUrl(siteSettings.whatsappUrl) || PUBLIC_ENV.WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#10B981] transition-colors"
-            >
-              WhatsApp Desk
-            </a>
-            <Link
-              to="/admin"
-              className="inline-flex items-center gap-1 hover:text-[#2563EB] dark:hover:text-[#60A5FA] font-medium transition-colors"
-            >
-              <Lock className="w-3 h-3" />
-              <span>Admin Console</span>
-            </Link>
+          <span className="font-display font-black text-2xl tracking-tight">
+            <span className="bg-gradient-to-b from-[#FFB800] via-[#FF5500] to-[#D91B00] bg-clip-text text-transparent">
+              H41
+            </span>{' '}
+            <span className="bg-gradient-to-b from-[#FF6B00] to-[#C81E00] bg-clip-text text-transparent">
+              FF TOPUP
+            </span>
+          </span>
+        </Link>
+
+        {/* 3. Centered Bangla/English Support Paragraph (Matches 00:46 in Recording) */}
+        <p className="text-xs sm:text-sm text-gray-200 leading-relaxed max-w-xl font-medium">
+          H41FFTOPUP-এর সাথে আপনার গেমিং জার্নি হোক ঝামেলাহীন ও নিরাপদ! TopUp Failed বা যেকোনো ইস্যুতে আমরা ২৪/৭ ইনস্ট্যান্ট সলিউশন নিশ্চিত করে থাকি। যেকোনো প্রশ্ন, ওয়েবসাইট ফিচার বা অর্ডার আপডেটের জন্য নিচে থাকা সাপোর্ট আইকনে ক্লিক করুন, আমাদের টিম দ্রুততম অফিসিয়াল টেলিগ্রাম চ্যানেলে জয়েন হয়ে প্রাইওরিটি কাস্টমার কেয়ার সার্ভিস গ্রহণ করুন।
+        </p>
+
+        {/* 4. Language Switch Button (Matches 00:46 & 01:23 in Recording) */}
+        <button
+          type="button"
+          onClick={() => setLanguage(language === 'bn' ? 'en' : 'bn')}
+          className="px-5 py-2.5 rounded-xl bg-[#381212] hover:bg-[#4B1818] border border-[#5C2424] text-white text-xs font-bold inline-flex items-center gap-2 transition-colors"
+        >
+          <Globe className="w-4 h-4 text-[#38BDF8]" />
+          <span>
+            {language === 'bn'
+              ? 'বাংলা — ভাষা পরিবর্তন'
+              : 'English — Change Language'}
+          </span>
+        </button>
+
+        {/* 5. Legal Policy Links Row (Privacy Policy · Terms & Conditions · Refund Policy) */}
+        <div className="flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm font-bold text-white pt-1">
+          <Link to="/privacy" className="hover:text-[#FF7A00] transition-colors">
+            Privacy Policy
+          </Link>
+          <Link to="/terms" className="hover:text-[#FF7A00] transition-colors">
+            Terms & Conditions
+          </Link>
+          <Link to="/faq" className="hover:text-[#FF7A00] transition-colors">
+            Refund Policy
+          </Link>
+        </div>
+
+        {/* Secondary Client Feature Links Row so all 22 routes are reachable from Footer */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-gray-400 max-w-xl">
+          <Link to="/topup" className="hover:text-white">UID TopUp</Link>
+          <span>·</span>
+          <Link to="/offers" className="hover:text-white">Weekly & Monthly</Link>
+          <span>·</span>
+          <Link to="/deposit" className="hover:text-white">Add Money</Link>
+          <span>·</span>
+          <Link to="/withdraw" className="hover:text-white">Withdraw</Link>
+          <span>·</span>
+          <Link to="/wallet" className="hover:text-white">Wallet</Link>
+          <span>·</span>
+          <Link to="/transactions" className="hover:text-white">My Orders</Link>
+          <span>·</span>
+          <Link to="/tournaments" className="hover:text-white">Tournaments</Link>
+          <span>·</span>
+          <Link to="/income" className="hover:text-white">Free Income</Link>
+          <span>·</span>
+          <Link to="/leaderboard" className="hover:text-white">Leaderboard</Link>
+          <span>·</span>
+          <Link to="/reviews" className="hover:text-white">Reviews</Link>
+          <span>·</span>
+          <Link to="/blog" className="hover:text-white">Blog</Link>
+          <span>·</span>
+          <Link to="/contact" className="hover:text-white">Contact</Link>
+          <span>·</span>
+          <Link to="/about" className="hover:text-white">About</Link>
+          <span>·</span>
+          <Link to="/admin" className="inline-flex items-center gap-1 text-[#FBBF24] hover:underline">
+            <Lock className="w-3 h-3" />
+            <span>Admin</span>
+          </Link>
+        </div>
+
+        {/* 6. White Bangladeshi Mobile Wallet Strip */}
+        <div className="w-full max-w-md rounded-md bg-white px-4 py-2 flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1 text-[11px] sm:text-xs font-extrabold shadow-xs">
+          <span className="text-gray-500 font-semibold">Pay With</span>
+          <span className="text-[#E2136E]">bKash</span>
+          <span className="text-[#F7941D]">Nagad</span>
+          <span className="text-[#8C3494]">Rocket</span>
+          <span className="text-[#006A4E]">Upay</span>
+        </div>
+
+        {/* 8. Bottom Divider & Copyright */}
+        <div className="w-full pt-4 border-t border-white/10 space-y-1 text-xs text-gray-300">
+          <div className="font-semibold">
+            © H41FFTOPUP {new Date().getFullYear()} | All Rights Reserved
+          </div>
+          <div className="text-[11px] font-mono tracking-wider uppercase text-gray-400">
+            DEVELOPED BY <span className="text-[#FF5500] font-bold">H41FFTOPUP</span>
           </div>
         </div>
       </div>

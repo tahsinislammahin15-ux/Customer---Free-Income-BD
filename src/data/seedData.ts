@@ -36,28 +36,28 @@ export const TASK_IMAGE = new URL(
 ).href;
 
 export const initialSiteSettings: SiteSettings = {
-  siteName: 'Free Income BD',
-  tagline: 'Bangladesh’s Unified Free Fire Top Up, Esports & Verified Rewards Ecosystem',
+  siteName: 'H41FFTOPUP',
+  tagline: 'Bangladesh’s #1 Instant Free Fire UID Top Up, Weekly Pass & Esports Storefront',
   logoUrl: '',
-  siteUrl: 'https://freeincomebd.com',
+  siteUrl: 'https://h41fftopup.com',
   mapEmbedUrl: 'https://www.google.com/maps?q=Banani,+Dhaka+1213,+Bangladesh&output=embed',
   facebookUrl: 'https://facebook.com',
   telegramUrl: 'https://telegram.org',
   whatsappUrl: 'https://whatsapp.com',
   announcementText:
-    'Instant UID Diamond Delivery in 30 Seconds · Friday Grand Squad Cup Registration Open (Prize Pool ৳15,000) · bKash & Nagad Automated Gateway Active 24/7',
+    'H41FFTOPUP Express UID Delivery in 30 Seconds · Weekly & Monthly Membership Flash Sale Live · bKash & Nagad Automated Checkout Active 24/7',
   announcementTextBn:
-    '৩০ সেকেন্ডে অটোমেটিক ফ্রি ফায়ার ডায়মন্ড টপ আপ · শুক্রবার গ্র্যান্ড স্কোয়াড কাপ রেজিস্ট্রেশন চলছে (প্রাইজপুল ৳১৫,০০০) · বিকাশ ও নগদ পেমেন্ট ২৪/৭ চালু',
-  heroHeadline: 'Instant Free Fire Top Up, Daily Esports Cups & Verified Task Rewards',
-  heroHeadlineBn: 'দ্রুততম ফ্রি ফায়ার ডায়মন্ড টপ আপ, ডেইলি টুর্নামেন্ট এবং ভেরিফাইড টাস্ক রিওয়ার্ডস',
+    'H41FFTOPUP-এ ৩০ সেকেন্ডে অটোমেটিক ফ্রি ফায়ার UID ডায়মন্ড টপ আপ · উইকলি ও মান্থলি মেম্বারশিপ স্পেশাল ডিসকাউন্ট চলছে · বিকাশ ও নগদ পেমেন্ট ২৪/৭ চালু',
+  heroHeadline: 'Bangladesh’s Fastest Free Fire UID Diamond Top Up & Esports Storefront',
+  heroHeadlineBn: 'বাংলাদেশের দ্রুততম ফ্রি ফায়ার UID ডায়মন্ড টপ আপ ও ইস্পোর্টস স্টোর',
   heroSubheadline:
-    'Engineered for Bangladeshi gamers. Top up diamonds via Player UID or UniPin in seconds, compete in moderated Solo/Duo/Squad rooms, and complete compliant digital tasks from one unified wallet.',
+    'Enter your Free Fire Player UID, select your diamond package or Weekly/Monthly Pass, and complete payment via Wallet, bKash, Nagad, Rocket, or Upay with 30-second automated delivery.',
   heroSubheadlineBn:
-    'বাংলাদেশী গেমারদের জন্য ৩-ইন-১ প্ল্যাটফর্ম। প্লেয়ার UID দিয়ে ডায়মন্ড টপ আপ, প্রতিদিনের কাস্টম রুম টুর্নামেন্ট এবং ভেরিফাইড অনলাইন টাস্ক সম্পূর্ণ করুন একই অ্যাকাউন্ট থেকে।',
-  supportEmail: 'support@freeincomebd.com',
+    'আপনার ফ্রি ফায়ার প্লেয়ার UID দিন, ডায়মন্ড বা মেম্বারশিপ প্যাকেজ সিলেক্ট করুন এবং বিকাশ, নগদ, রকেট বা ওয়ালেট দিয়ে ৩০ সেকেন্ডে তাৎক্ষণিক ডেলিভারি নিন।',
+  supportEmail: 'support@h41fftopup.com',
   supportPhone: '+880 1700-000000',
   supportWhatsapp: '+880 1700-000000',
-  supportTelegram: '@freeincomebd',
+  supportTelegram: '@h41fftopup',
   officeAddress: 'House 42, Road 11, Block F, Banani, Dhaka-1213, Bangladesh',
   defaultLanguage: 'en',
   defaultTheme: 'dark',
@@ -96,7 +96,7 @@ export const initialUsers: User[] = [
     mainBalance: 420,
     incomeBalance: 890,
     bonusBalance: 50,
-    referralCode: 'RAFIBD26',
+    referralCode: 'RAFH4126',
     referredBy: 'TAHSINBD',
     referralCount: 14,
     totalEarned: 6450,
@@ -374,7 +374,7 @@ export const initialTournaments: Tournament[] = [
     startTime: 'Today, 10:30 PM BST',
     status: 'Upcoming',
     rules: [
-      '100% Free entry for all verified Free Income BD players.',
+      '100% Free entry for all verified H41FFTOPUP players.',
       'Teaming up in Solo mode leads to immediate disqualification.',
       'Prize money credited directly to Income Wallet within 30 minutes of match end.',
     ],
@@ -427,7 +427,7 @@ export const initialTournaments: Tournament[] = [
 export const initialTasks: IncomeTask[] = [
   {
     id: 'TSK-301',
-    title: 'Subscribe & Review Free Income BD Official YouTube Channel',
+    title: 'Subscribe & Review H41FFTOPUP Official YouTube Channel',
     titleBn: 'অফিশিয়াল ইউটিউব চ্যানেল সাবস্ক্রাইব ও কমেন্ট রিভিউ',
     category: 'Task Complete',
     description:
@@ -450,7 +450,7 @@ export const initialTasks: IncomeTask[] = [
     titleBn: 'অফিশিয়াল টেলিগ্রাম ও ডিসকর্ড কমিউনিটিতে যোগ দিন',
     category: 'Task Complete',
     description:
-      'Join our verified Telegram announcement channel (@freeincomebd) to receive instant Custom Room IDs and daily voucher drops.',
+      'Join our verified Telegram announcement channel (@h41fftopup) to receive instant Custom Room IDs and daily voucher drops.',
     requirements: [
       'Join using your active Telegram account.',
       'Submit your Telegram @username in the verification note.',
@@ -588,11 +588,11 @@ export const initialTaskSubmissions: TaskSubmission[] = [
   {
     id: 'SUB-701',
     taskId: 'TSK-301',
-    taskTitle: 'Subscribe & Review Free Income BD Official YouTube Channel',
+    taskTitle: 'Subscribe & Review H41FFTOPUP Official YouTube Channel',
     userId: 'USR-1001',
     userName: 'Tahsin Islam Mahin',
     rewardBdt: 15,
-    proofUrl: 'https://youtube.com/watch?v=fibd_guide&lc=Ugz9921',
+    proofUrl: 'https://youtube.com/watch?v=h41fftopup_guide&lc=Ugz9921',
     proofNote: 'Subscribed as @tahsin_bd and commented IGN: BD_TAHSIN_99',
     status: 'Approved',
     submittedAt: '2026-11-13 18:10',
@@ -604,7 +604,7 @@ export const initialTaskSubmissions: TaskSubmission[] = [
     userId: 'USR-1001',
     userName: 'Tahsin Islam Mahin',
     rewardBdt: 35,
-    proofUrl: 'https://forms.google.com/fibd-ISP-ref-8831',
+    proofUrl: 'https://forms.google.com/h41fftopup-ISP-ref-8831',
     proofNote: 'Completed ISP survey using Grameenphone 4G & Amber IT broadband, Ref: ISP-8831',
     status: 'Pending',
     submittedAt: '2026-11-15 13:25',
@@ -763,7 +763,7 @@ export const initialPaymentSettings: PaymentSettings = {
       active: true,
       merchantNumber: '01700-000001',
       personalNumber: '01700-000002',
-      instructions: 'Dial *247# or use bKash App -> Send Money / Make Payment -> Enter Reference FIBD.',
+      instructions: 'Dial *247# or use bKash App -> Send Money / Make Payment -> Enter Reference H41FFTOPUP.',
       color: '#E2136E',
     },
     {
@@ -826,7 +826,7 @@ export const initialBlogPosts: BlogPost[] = [
       'The OB47 update introduces major adjustments to Clash Squad round economy and active character cooldowns. Our tournament moderators have updated the Friday Grand Squad rulebook to reflect these balance changes.',
     publishedAt: '12 Nov 2026',
     readTime: '4 min read',
-    author: 'FIBD Esports Desk',
+    author: 'H41FFTOPUP Esports Desk',
   },
   {
     id: 'BLG-102',
@@ -835,7 +835,7 @@ export const initialBlogPosts: BlogPost[] = [
     excerpt:
       'Learn why UID and UniPin voucher top-ups are the only safe way to purchase Free Fire diamonds in Bangladesh without risking account theft.',
     content:
-      'Never share your Facebook, Gmail, or VK login credentials with third-party sellers. Free Income BD uses authorized Garena Player UID and official UniPin voucher APIs so your account remains 100% secure.',
+      'Never share your Facebook, Gmail, or VK login credentials with third-party sellers. H41FFTOPUP uses authorized Garena Player UID and official UniPin voucher APIs so your account remains 100% secure.',
     publishedAt: '08 Nov 2026',
     readTime: '3 min read',
     author: 'Security & Trust Team',
@@ -847,7 +847,7 @@ export const initialBlogPosts: BlogPost[] = [
     excerpt:
       'A transparent breakdown of how advertiser-funded micro-tasks, community surveys, and referral bonuses are verified and paid out.',
     content:
-      'Unlike unrealistic schemes, Free Income BD partners with local gaming brands and research surveys. Every submission is reviewed for quality, and approved rewards can be withdrawn once your Income Balance reaches ৳100.',
+      'Unlike unrealistic schemes, H41FFTOPUP partners with local gaming brands and research surveys. Every submission is reviewed for quality, and approved rewards can be withdrawn once your Income Balance reaches ৳100.',
     publishedAt: '02 Nov 2026',
     readTime: '5 min read',
     author: 'Operations Team',
@@ -863,7 +863,7 @@ export const initialReviews: UserReview[] = [
     serviceUsed: 'Squad Tournament & UID Top Up',
     rating: 5,
     comment:
-      'Before using Free Income BD, our squad waited hours for custom room prizes on random Facebook pages. Here, our ৳8,000 Autumn Cup prize was credited to my wallet within 20 minutes and withdrawn to Nagad smoothly.',
+      'Before using H41FFTOPUP, our squad waited hours for custom room prizes on random Facebook pages. Here, our ৳8,000 Autumn Cup prize was credited to my wallet within 20 minutes and withdrawn to Nagad smoothly.',
     date: '14 Nov 2026',
   },
   {
@@ -882,7 +882,7 @@ export const initialReviews: UserReview[] = [
     userName: 'Sadia Afrin Mim',
     ffIgn: 'QUEEN_SADIA',
     location: 'Uttara, Dhaka',
-    serviceUsed: 'Free Income Tasks & Referrals',
+    serviceUsed: 'Reward Tasks & Referrals',
     rating: 5,
     comment:
       'I complete the ISP ping surveys and partner tasks between college classes. Earned ৳620 this month and used part of it to buy a Weekly Membership directly from my wallet.',
@@ -896,7 +896,7 @@ export const initialReviews: UserReview[] = [
     serviceUsed: 'Solo Free Entry Tournament',
     rating: 5,
     comment:
-      'The Room ID and Password reveal right inside the tournament card for registered players prevents outsiders from leaking the room. Best managed esports site in BD.',
+      'The Room ID and Password reveal right inside the tournament card for registered players prevents outsiders from leaking the room. Best managed esports & top-up site in BD.',
     date: '05 Nov 2026',
   },
 ];
@@ -914,7 +914,7 @@ export const initialFaqs: FAQItem[] = [
     category: 'Top Up',
     question: 'Do you ever need my Free Fire Facebook or Google password for Top Up?',
     answer:
-      'Never. Free Income BD only requires your numeric Free Fire Player UID (for UID Top Up) or delivers an official redeemable UniPin code. Never share your password with anyone.',
+      'Never. H41FFTOPUP only requires your numeric Free Fire Player UID (for UID Top Up) or delivers an official redeemable UniPin code. Never share your password with anyone.',
   },
   {
     id: 'FAQ-3',
@@ -926,9 +926,9 @@ export const initialFaqs: FAQItem[] = [
   {
     id: 'FAQ-4',
     category: 'Income Tasks',
-    question: 'Is there any registration fee to complete Free Income tasks, and is income guaranteed?',
+    question: 'Is there any registration fee to complete reward tasks, and is income guaranteed?',
     answer:
-      'Creating an account and completing tasks on Free Income BD is 100% free. Rewards depend strictly on completing genuine, verifiable tasks according to advertiser guidelines. We do not offer passive investment schemes or guaranteed income.',
+      'Creating an account and completing tasks on H41FFTOPUP is 100% free. Rewards depend strictly on completing genuine, verifiable tasks according to advertiser guidelines. We do not offer passive investment schemes or guaranteed income.',
   },
   {
     id: 'FAQ-5',
@@ -954,7 +954,7 @@ export const initialContactMessages: ContactMessage[] = [
     phone: '01788990011',
     subject: 'Custom Guild Tournament Sponsorship Inquiry',
     message:
-      'Assalamu Alaikum, our guild (Dhaka Immortals, 150+ active players) would like to host a sponsored Friday Squad tournament on Free Income BD.',
+      'Assalamu Alaikum, our guild (Dhaka Immortals, 150+ active players) would like to host a sponsored Friday Squad tournament on H41FFTOPUP.',
     status: 'New',
     createdAt: '2026-11-15 10:20',
   },

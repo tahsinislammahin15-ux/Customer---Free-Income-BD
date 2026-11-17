@@ -15,7 +15,6 @@ import {
   Lock,
   Upload,
   AlertTriangle,
-  XCircle,
   Clock,
   CreditCard,
   Image as ImageIcon,
@@ -23,35 +22,32 @@ import {
 import { useApp } from '../context/AppContext';
 import { PaymentGatewayName, SupportTicket, WalletStatus } from '../types';
 
+/* ============================================================================
+   REFERENCE-STYLE STATUS BADGE (#00C853 COMPLETE / AMBER PENDING / RED REJECTED)
+   ============================================================================ */
 export const WalletStatusBadge: React.FC<{ status: WalletStatus | string }> = ({ status }) => {
   const normalized = status as WalletStatus;
   const styles: Record<string, string> = {
-    Pending:
-      'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30',
-    Approved:
-      'bg-[#2563EB]/15 text-[#2563EB] dark:text-[#60A5FA] border border-[#2563EB]/30',
-    Completed:
-      'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30',
-    Rejected:
-      'bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30',
-    Failed:
-      'bg-[#F43F5E]/15 text-[#F43F5E] border border-[#F43F5E]/30',
+    Pending: 'bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]',
+    Approved: 'bg-[#DBEAFE] text-[#1D4ED8] border border-[#BFDBFE]',
+    Completed: 'bg-[#00C853] text-white border border-[#00C853]',
+    Rejected: 'bg-[#FEE2E2] text-[#B91C1C] border border-[#FECACA]',
+    Failed: 'bg-[#FEE2E2] text-[#B91C1C] border border-[#FECACA]',
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${
+      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
         styles[normalized] || styles.Pending
       }`}
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-current" />
-      <span>{status}</span>
+      <span>{status === 'Completed' ? 'COMPLETE' : status}</span>
     </span>
   );
 };
 
 /* ============================================================================
-   6. MY ACCOUNT (UNIFIED USER DASHBOARD)
+   1. MY ACCOUNT (UNIFIED PLAYER DASHBOARD — /account)
    ============================================================================ */
 export const MyAccountPage: React.FC = () => {
   const {
@@ -63,6 +59,7 @@ export const MyAccountPage: React.FC = () => {
     supportTickets,
     submitSupportTicket,
     addToast,
+    logout,
   } = useApp();
 
   const [ticketCategory, setTicketCategory] =
@@ -72,17 +69,22 @@ export const MyAccountPage: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
-        <h1 className="text-2xl font-bold">Sign In to Access Your Account</h1>
-        <p className="text-sm text-[#475569] dark:text-[#94A3B8]">
-          View your unified Free Fire Top Up orders, tournament Room IDs, and task rewards.
-        </p>
-        <button
-          onClick={() => navigate('login')}
-          className="px-5 py-2.5 rounded-xl bg-[#2563EB] text-white text-sm font-semibold"
-        >
-          Go to Sign In
-        </button>
+      <div className="max-w-[440px] mx-auto px-3.5 py-12">
+        <div className="zvy-card p-6 text-center space-y-4">
+          <h1 className="text-xl font-bold text-[#111827] dark:text-[#F8FAFC]">
+            Sign In to Access Your Account
+          </h1>
+          <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
+            View your Free Fire Top Up orders, tournament Room IDs, and wallet balance.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('login')}
+            className="w-full h-[42px] rounded-xl bg-[#3B0A0A] text-white text-xs font-semibold"
+          >
+            Login Now
+          </button>
+        </div>
       </div>
     );
   }
@@ -107,134 +109,205 @@ export const MyAccountPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-      {/* Top Account Welcome & Quick Navigation */}
-      <div className="p-6 sm:p-8 rounded-2xl card-premium flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <div className="text-xs font-mono text-[#2563EB]">
-            Account ID: {currentUser.id} · Free Fire UID: {currentUser.ffUid} ({currentUser.ffIgn})
+    <div className="max-w-[960px] mx-auto px-3 sm:px-5 py-6 space-y-4">
+      {/* Top Account Identity & Quick Actions Card */}
+      <div className="zvy-card p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-[#3B0A0A] text-white font-extrabold text-lg flex items-center justify-center shrink-0 shadow-xs">
+            {currentUser.name.slice(0, 1).toUpperCase()}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
-            Welcome back, {currentUser.name}
-          </h1>
-          <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
-            Joined {currentUser.joinedAt} · {currentUser.referralCount} Verified Referrals ·{' '}
-            {currentUser.tournamentWins} Tournament Booyahs
-          </p>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-extrabold text-[#111827] dark:text-[#F8FAFC]">
+                {currentUser.name}
+              </h1>
+              <span className="px-2 py-0.5 rounded-full bg-[#00C853] text-white text-[10px] font-extrabold uppercase">
+                UID: {currentUser.ffUid}
+              </span>
+            </div>
+            <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] font-mono">
+              IGN: {currentUser.ffIgn} · ID: {currentUser.id} · Refs: {currentUser.referralCount}
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={() => navigate('wallet')}
-            className="min-h-[42px] px-4 py-2.5 rounded-xl btn-primary text-xs font-semibold"
+            className="h-[38px] px-3.5 rounded-xl bg-[#3B0A0A] text-white text-xs font-semibold"
           >
-            Open Wallet
+            My Wallet
           </button>
           <button
+            type="button"
             onClick={() => navigate('deposit')}
-            className="min-h-[42px] px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#1E293B] hover:border-[#2563EB] text-xs font-semibold"
+            className="h-[38px] px-3.5 rounded-xl bg-[#0D3B66] text-white text-xs font-semibold"
           >
-            Deposit BDT
+            + Add Money
           </button>
           <button
+            type="button"
             onClick={() => navigate('withdraw')}
-            className="min-h-[42px] px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#1E293B] hover:border-[#10B981] text-xs font-semibold text-[#10B981]"
+            className="h-[38px] px-3.5 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold text-[#059669]"
           >
-            Withdraw BDT
+            Withdraw
           </button>
           <button
+            type="button"
             onClick={() => navigate('profile')}
-            className="min-h-[42px] px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#1E293B] text-xs font-semibold"
+            className="h-[38px] px-3.5 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold"
           >
-            Edit Profile & UID
+            Edit Profile
+          </button>
+          <button
+            type="button"
+            onClick={logout}
+            className="col-span-2 sm:col-span-1 h-[38px] px-3.5 rounded-xl bg-[#FEE2E2] text-[#B91C1C] text-xs font-semibold"
+          >
+            Logout
           </button>
         </div>
       </div>
 
-      {/* 3 Wallet Balances Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl card-premium space-y-2">
-          <div className="text-xs font-medium text-[#475569] dark:text-[#94A3B8]">
-            Main Balance (Deposits & Top Up)
+      {/* 3 Wallet Balances Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="zvy-card p-4 space-y-1">
+          <div className="text-[11px] font-bold text-[#6B7280] uppercase">
+            Main Wallet Balance
           </div>
-          <div className="text-3xl font-extrabold font-mono text-[#2563EB]">
+          <div className="text-2xl font-extrabold font-mono text-[#3B0A0A] dark:text-[#FCA5A5]">
             ৳{currentUser.mainBalance} BDT
           </div>
-          <div className="text-xs text-[#475569] dark:text-[#94A3B8]">
-            Used for instant UID Top Up & Tournament entry fees
+          <div className="text-[11px] text-[#6B7280]">
+            Instant Top-Up & Room Entry
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl card-premium space-y-2">
-          <div className="text-xs font-medium text-[#475569] dark:text-[#94A3B8]">
-            Income Balance (Tasks, Prizes & Referrals)
+        <div className="zvy-card p-4 space-y-1">
+          <div className="text-[11px] font-bold text-[#6B7280] uppercase">
+            Income Balance
           </div>
-          <div className="text-3xl font-extrabold font-mono text-[#10B981]">
+          <div className="text-2xl font-extrabold font-mono text-[#059669]">
             ৳{currentUser.incomeBalance} BDT
           </div>
-          <div className="text-xs text-[#475569] dark:text-[#94A3B8]">
-            Withdrawable via bKash, Nagad, Rocket & Upay
+          <div className="text-[11px] text-[#6B7280]">
+            Withdrawable via bKash / Nagad
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl card-premium space-y-2">
-          <div className="text-xs font-medium text-[#475569] dark:text-[#94A3B8]">
-            Bonus Balance (Promotional Credits)
+        <div className="zvy-card p-4 space-y-1">
+          <div className="text-[11px] font-bold text-[#6B7280] uppercase">
+            Bonus Balance
           </div>
-          <div className="text-3xl font-extrabold font-mono text-[#F59E0B]">
+          <div className="text-2xl font-extrabold font-mono text-[#D97706]">
             ৳{currentUser.bonusBalance} BDT
           </div>
-          <div className="text-xs text-[#475569] dark:text-[#94A3B8]">
-            Transferable to Main Wallet for Diamond purchases
+          <div className="text-[11px] text-[#6B7280]">
+            0%-Fee Transfer to Main Wallet
           </div>
         </div>
       </div>
 
-      {/* Active Tournaments & Recent Orders Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Registered Tournaments with Room ID Reveal */}
-        <div className="p-6 rounded-2xl card-premium space-y-4">
+      {/* Recent Top-Up Orders (Matching Latest Orders Card Style at 00:35) & Registered Tournaments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* My Diamond Orders */}
+        <div className="zvy-card p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              My Registered Tournaments ({myTournaments.length})
-            </h2>
+            <div className="flex items-center gap-2">
+              <span className="step-badge">1</span>
+              <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+                MY TOP-UP ORDERS ({myOrders.length})
+              </h2>
+            </div>
             <button
-              onClick={() => navigate('tournaments')}
-              className="text-xs font-semibold text-[#2563EB] hover:underline"
+              type="button"
+              onClick={() => navigate('topup')}
+              className="text-xs font-bold text-[#3B0A0A] dark:text-[#FCA5A5] hover:underline"
             >
-              Browse Lobby →
+              + New Order
             </button>
           </div>
+
+          <div className="space-y-2">
+            {myOrders.slice(0, 5).map((ord) => (
+              <div
+                key={ord.id}
+                className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between gap-2 text-xs"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <div className="font-bold text-[#111827] dark:text-[#F8FAFC] truncate">
+                    {ord.packageTitle}
+                  </div>
+                  <div className="text-[11px] font-mono text-[#6B7280]">
+                    {ord.id} · UID: {ord.playerUid}
+                  </div>
+                  {ord.voucherPin && (
+                    <div className="text-[11px] font-mono font-bold text-[#0D3B66] dark:text-[#60A5FA]">
+                      PIN: {ord.voucherPin}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right shrink-0 space-y-1">
+                  <div className="font-mono font-extrabold text-[#111827] dark:text-white">
+                    ৳{ord.amountBdt}
+                  </div>
+                  <WalletStatusBadge status={ord.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* My Registered Esports Tournaments */}
+        <div className="zvy-card p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="step-badge">2</span>
+              <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+                MY TOURNAMENT ROOMS ({myTournaments.length})
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('tournaments')}
+              className="text-xs font-bold text-[#3B0A0A] dark:text-[#FCA5A5] hover:underline"
+            >
+              Join Match →
+            </button>
+          </div>
+
           {myTournaments.length === 0 ? (
-            <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
-              You have not registered for any tournaments yet.
+            <p className="text-xs text-[#6B7280] py-4 text-center">
+              You have not joined any tournament rooms yet.
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {myTournaments.map((trn) => (
                 <div
                   key={trn.id}
-                  className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2"
+                  className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] space-y-1.5 text-xs"
                 >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#111827] dark:text-[#F8FAFC]">
                       {trn.title}
                     </span>
-                    <span className="font-mono text-[#06B6D4] font-semibold">
+                    <span className="text-[11px] font-mono font-semibold text-[#3B0A0A] dark:text-[#FCA5A5]">
                       {trn.startTime}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs font-mono pt-1 border-t border-[#E2E8F0] dark:border-[#1E293B]">
-                    <span className="text-[#10B981]">
+                  <div className="flex items-center justify-between pt-1 border-t border-[#E5E7EB] dark:border-[#1E293B] font-mono text-[11px]">
+                    <span className="text-[#059669] font-bold">
                       Room ID: {trn.roomId || 'TBA'} · Pass: {trn.roomPassword || 'TBA'}
                     </span>
                     {trn.roomId && (
                       <button
+                        type="button"
                         onClick={() => {
                           navigator.clipboard.writeText(trn.roomId!);
                           addToast('Room ID Copied', `Room ID ${trn.roomId} copied.`, 'info');
                         }}
-                        className="text-[#2563EB] hover:underline inline-flex items-center gap-1"
+                        className="text-[#3B0A0A] dark:text-[#FCA5A5] font-bold inline-flex items-center gap-1 hover:underline"
                       >
                         <Copy className="w-3 h-3" />
                         <span>Copy</span>
@@ -246,99 +319,53 @@ export const MyAccountPage: React.FC = () => {
             </div>
           )}
         </div>
-
-        {/* Recent Top Up Orders */}
-        <div className="p-6 rounded-2xl card-premium space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              My Diamond Orders ({myOrders.length})
-            </h2>
-            <button
-              onClick={() => navigate('topup')}
-              className="text-xs font-semibold text-[#2563EB] hover:underline"
-            >
-              New Top Up →
-            </button>
-          </div>
-          <div className="space-y-3">
-            {myOrders.slice(0, 4).map((ord) => (
-              <div
-                key={ord.id}
-                className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] flex items-center justify-between text-xs"
-              >
-                <div>
-                  <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                    {ord.packageTitle}
-                  </div>
-                  <div className="font-mono text-[#475569] dark:text-[#94A3B8]">
-                    {ord.id} · UID: {ord.playerUid} · {ord.createdAt}
-                  </div>
-                </div>
-                <div className="text-right font-mono">
-                  <div className="font-bold text-[#2563EB]">৳{ord.amountBdt}</div>
-                  <div
-                    className={`font-bold ${
-                      ord.status === 'Completed'
-                        ? 'text-[#10B981]'
-                        : ord.status === 'Cancelled'
-                        ? 'text-[#EF4444]'
-                        : 'text-[#F59E0B]'
-                    }`}
-                  >
-                    {ord.status}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* Notifications Feed & Support Ticket Submission */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 p-6 rounded-2xl card-premium space-y-4">
+      {/* Activity Feed & Support Ticket Box */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-5 zvy-card p-4 sm:p-5 space-y-3">
           <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-[#2563EB]" />
-            <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              Account Activity & Notifications
+            <Bell className="w-4 h-4 text-[#3B0A0A] dark:text-[#FCA5A5]" />
+            <h2 className="text-sm font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+              ACCOUNT NOTIFICATIONS
             </h2>
           </div>
-          <div className="space-y-3 text-xs">
-            <div className="p-3.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]">
-              <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                Custom Room Unlocked: TRN-501
+          <div className="space-y-2 text-xs">
+            <div className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B]">
+              <div className="font-bold text-[#111827] dark:text-[#F8FAFC]">
+                Custom Room Active: TRN-501
               </div>
-              <div className="text-[#475569] dark:text-[#94A3B8] mt-0.5">
-                Room ID <span className="font-mono">88492014</span> is active for tonight’s 9:00 PM Clash Squad match.
+              <div className="text-[#6B7280] mt-0.5">
+                Room ID <span className="font-mono font-bold">88492014</span> is live for tonight’s 9:00 PM match.
               </div>
             </div>
-            <div className="p-3.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]">
-              <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+            <div className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B]">
+              <div className="font-bold text-[#111827] dark:text-[#F8FAFC]">
                 Task Submissions ({mySubmissions.length})
               </div>
-              <div className="text-[#475569] dark:text-[#94A3B8] mt-0.5">
-                You have {mySubmissions.filter((s) => s.status === 'Pending').length} pending and{' '}
-                {mySubmissions.filter((s) => s.status === 'Approved').length} approved task proofs.
+              <div className="text-[#6B7280] mt-0.5">
+                {mySubmissions.filter((s) => s.status === 'Pending').length} pending ·{' '}
+                {mySubmissions.filter((s) => s.status === 'Approved').length} approved proofs.
               </div>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-7 p-6 rounded-2xl card-premium space-y-4">
+        <div className="lg:col-span-7 zvy-card p-4 sm:p-5 space-y-3">
           <div className="flex items-center gap-2">
-            <LifeBuoy className="w-4 h-4 text-[#10B981]" />
-            <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              Open a Priority Support Ticket
+            <LifeBuoy className="w-4 h-4 text-[#3B0A0A] dark:text-[#FCA5A5]" />
+            <h2 className="text-sm font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+              OPEN SUPPORT TICKET ({myTickets.length} ACTIVE)
             </h2>
           </div>
-          <form onSubmit={handleTicketSubmit} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <form onSubmit={handleTicketSubmit} className="space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <select
                 value={ticketCategory}
                 onChange={(e) =>
                   setTicketCategory(e.target.value as SupportTicket['category'])
                 }
-                className="px-3 py-2 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                className="h-[40px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
               >
                 <option value="Top Up Issue">Top Up Issue</option>
                 <option value="Tournament Room">Tournament Room</option>
@@ -351,7 +378,7 @@ export const MyAccountPage: React.FC = () => {
                 value={ticketSubject}
                 onChange={(e) => setTicketSubject(e.target.value)}
                 placeholder="Order ID or Match Reference"
-                className="px-3 py-2 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                className="h-[40px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
               />
             </div>
             <textarea
@@ -359,20 +386,15 @@ export const MyAccountPage: React.FC = () => {
               required
               value={ticketMessage}
               onChange={(e) => setTicketMessage(e.target.value)}
-              placeholder="Describe your issue clearly..."
-              className="w-full px-3 py-2 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              placeholder="Write your issue details..."
+              className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[#475569] dark:text-[#94A3B8]">
-                Active Tickets: {myTickets.length}
-              </span>
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-xl btn-primary text-xs font-semibold"
-              >
-                Submit Support Ticket
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="w-full sm:w-auto px-5 h-[40px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-semibold transition-colors"
+            >
+              Submit Support Ticket
+            </button>
           </form>
         </div>
       </div>
@@ -381,7 +403,7 @@ export const MyAccountPage: React.FC = () => {
 };
 
 /* ============================================================================
-   7. USER PROFILE PAGE
+   2. USER PROFILE PAGE (/profile)
    ============================================================================ */
 export const UserProfilePage: React.FC = () => {
   const { currentUser, updateProfile, changePassword, navigate } = useApp();
@@ -395,13 +417,16 @@ export const UserProfilePage: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center">
-        <button
-          onClick={() => navigate('login')}
-          className="px-5 py-2.5 rounded-xl bg-[#2563EB] text-white text-sm font-semibold"
-        >
-          Sign In Required
-        </button>
+      <div className="max-w-[440px] mx-auto px-3.5 py-12 text-center">
+        <div className="zvy-card p-6 space-y-4">
+          <button
+            type="button"
+            onClick={() => navigate('login')}
+            className="w-full h-[42px] rounded-xl bg-[#3B0A0A] text-white text-xs font-semibold"
+          >
+            Login Required
+          </button>
+        </div>
       </div>
     );
   }
@@ -421,60 +446,54 @@ export const UserProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <div className="p-6 sm:p-8 rounded-2xl card-premium flex items-center justify-between">
+    <div className="max-w-[820px] mx-auto px-3.5 sm:px-6 py-6 space-y-4">
+      <div className="zvy-card p-5 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
-            Player Profile & Free Fire UID Binding
+          <h1 className="text-lg sm:text-xl font-extrabold text-[#111827] dark:text-[#F8FAFC]">
+            Player Profile & Free Fire UID Settings
           </h1>
-          <p className="text-xs text-[#475569] dark:text-[#94A3B8] mt-1">
-            Keep your Bangladesh Server UID accurate for one-click Diamond Top Ups and Tournament room checks.
+          <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
+            Keep your Free Fire Player ID accurate for instant 1-click Top-Ups.
           </p>
         </div>
-        <div className="px-3.5 py-1.5 rounded-xl bg-[#EFF6FF] dark:bg-[#1E293B] text-xs font-semibold text-[#10B981] flex items-center gap-1.5">
-          <UserCheck className="w-4 h-4" />
-          <span>{currentUser.verified ? 'KYC & UID Verified' : 'Unverified'}</span>
-        </div>
+        <span className="px-3 py-1 rounded-full bg-[#00C853] text-white text-[11px] font-extrabold inline-flex items-center gap-1">
+          <UserCheck className="w-3.5 h-3.5" />
+          <span>{currentUser.verified ? 'VERIFIED PLAYER' : 'ACTIVE'}</span>
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <form
-          onSubmit={handleSaveProfile}
-          className="p-6 rounded-2xl card-premium space-y-4"
-        >
-          <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-            Personal & Game Identity
-          </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSaveProfile} className="zvy-card p-5 space-y-3.5">
+          <div className="flex items-center gap-2">
+            <span className="step-badge">1</span>
+            <h2 className="text-sm font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+              PERSONAL & GAME INFO
+            </h2>
+          </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">Full Name</label>
+            <label className="block text-xs font-medium mb-1">Name</label>
             <input
               type="text"
               required
               maxLength={80}
-              autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="w-full h-[40px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">
-              Bangladesh Mobile Number (bKash/Nagad Linked)
-            </label>
+            <label className="block text-xs font-medium mb-1">Phone number</label>
             <input
               type="tel"
               required
               maxLength={14}
-              autoComplete="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">
-              Free Fire Numeric Player UID
-            </label>
+            <label className="block text-xs font-medium mb-1">Free Fire Player ID (UID)</label>
             <input
               type="text"
               inputMode="numeric"
@@ -482,25 +501,23 @@ export const UserProfilePage: React.FC = () => {
               maxLength={12}
               value={ffUid}
               onChange={(e) => setFfUid(e.target.value.replace(/\D/g, ''))}
-              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">
-              Free Fire In-Game Name (IGN)
-            </label>
+            <label className="block text-xs font-medium mb-1">In-Game Name (IGN)</label>
             <input
               type="text"
               required
               maxLength={40}
               value={ffIgn}
               onChange={(e) => setFfIgn(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="w-full h-[40px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             />
           </div>
           <button
             type="submit"
-            className="w-full py-2.5 rounded-xl btn-primary text-xs font-semibold"
+            className="w-full h-[42px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-semibold transition-colors"
           >
             Save Profile Changes
           </button>
@@ -508,46 +525,46 @@ export const UserProfilePage: React.FC = () => {
 
         <form
           onSubmit={handlePasswordChange}
-          className="p-6 rounded-2xl card-premium space-y-4 flex flex-col justify-between"
+          className="zvy-card p-5 space-y-3.5 flex flex-col justify-between"
         >
-          <div className="space-y-4">
-            <h2 className="text-base font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-[#2563EB]" />
-              <span>Security & Password Update</span>
-            </h2>
+          <div className="space-y-3.5">
+            <div className="flex items-center gap-2">
+              <span className="step-badge">2</span>
+              <h2 className="text-sm font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+                CHANGE PASSWORD
+              </h2>
+            </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">Current Password</label>
+              <label className="block text-xs font-medium mb-1">Current Password</label>
               <input
                 type="password"
                 required
                 maxLength={128}
-                autoComplete="current-password"
                 value={currentPass}
                 onChange={(e) => setCurrentPass(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                placeholder="password"
+                className="w-full h-[40px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">New Password</label>
+              <label className="block text-xs font-medium mb-1">New Password</label>
               <input
                 type="password"
                 required
                 minLength={6}
                 maxLength={128}
-                autoComplete="new-password"
                 value={newPass}
                 onChange={(e) => setNewPass(e.target.value)}
-                placeholder="Minimum 6 characters"
-                className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                placeholder="new password"
+                className="w-full h-[40px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
               />
             </div>
           </div>
           <button
             type="submit"
-            className="w-full py-2.5 rounded-xl border border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white text-xs font-semibold transition-colors"
+            className="w-full h-[42px] rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-semibold transition-colors"
           >
-            Update Account Password
+            Update Password
           </button>
         </form>
       </div>
@@ -556,7 +573,7 @@ export const UserProfilePage: React.FC = () => {
 };
 
 /* ============================================================================
-   8. WALLET PAGE (BACKEND DOUBLE-ENTRY BALANCES, PENDING LOCKS & FULL LEDGER)
+   3. WALLET PAGE (/wallet — DOUBLE-ENTRY BALANCES, PENDING LOCKS & LEDGER)
    ============================================================================ */
 export const WalletPage: React.FC = () => {
   const {
@@ -580,17 +597,20 @@ export const WalletPage: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
-        <h1 className="text-2xl font-bold">Sign In to Access Your Wallet</h1>
-        <p className="text-sm text-[#475569] dark:text-[#94A3B8]">
-          View your double-entry ledger balances, deposit funds, or withdraw earnings.
-        </p>
-        <button
-          onClick={() => navigate('login')}
-          className="px-5 py-2.5 rounded-xl bg-[#2563EB] text-white text-sm font-semibold"
-        >
-          Sign In to View Wallet
-        </button>
+      <div className="max-w-[440px] mx-auto px-3.5 py-12 text-center">
+        <div className="zvy-card p-6 space-y-4">
+          <h1 className="text-xl font-bold">Sign In to Access Your Wallet</h1>
+          <p className="text-xs text-[#6B7280]">
+            View your wallet balances, add money via bKash/Nagad, or withdraw earnings.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('login')}
+            className="w-full h-[42px] rounded-xl bg-[#3B0A0A] text-white text-xs font-semibold"
+          >
+            Login Now
+          </button>
+        </div>
       </div>
     );
   }
@@ -629,43 +649,40 @@ export const WalletPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-      {/* Header & Primary Deposit / Withdraw Actions */}
-      <div className="p-6 sm:p-8 rounded-2xl card-premium flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-[#2563EB]">
-            <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-            <span>SERVER-AUTHORITATIVE DOUBLE-ENTRY LEDGER · IDEMPOTENCY PROTECTED</span>
+    <div className="max-w-[960px] mx-auto px-3 sm:px-5 py-6 space-y-4">
+      {/* Header & Primary Add Money / Withdraw Buttons */}
+      <div className="zvy-card p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#3B0A0A] dark:text-[#FCA5A5]">
+            <ShieldCheck className="w-4 h-4 text-[#00C853]" />
+            <span>H41FFTOPUP WALLET · INSTANT TOP-UP & PAYOUT LEDGER</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
-            Fintech Wallet & Double-Entry Ledger
+          <h1 className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-[#F8FAFC]">
+            My Wallet & Balance History
           </h1>
-          <p className="text-sm text-[#475569] dark:text-[#94A3B8]">
-            Every balance is dynamically computed on the server from atomic credit and debit entries. Never calculated or overwritten on the client.
-          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={handleSyncLedger}
-            className="min-h-[44px] px-4 py-2.5 rounded-xl btn-secondary text-xs font-semibold inline-flex items-center gap-1.5"
+            className="h-[40px] px-3.5 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold inline-flex items-center gap-1.5"
           >
-            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            <span>Sync Server Ledger</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            <span>Sync</span>
           </button>
           <button
             type="button"
             onClick={() => navigate('deposit')}
-            className="min-h-[44px] px-5 py-2.5 rounded-xl btn-primary text-xs sm:text-sm font-bold inline-flex items-center gap-1.5"
+            className="h-[40px] px-4 rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-bold inline-flex items-center gap-1.5"
           >
             <ArrowDownLeft className="w-4 h-4" />
-            <span>Deposit BDT</span>
+            <span>+ Add Money (Deposit)</span>
           </button>
           <button
             type="button"
             onClick={() => navigate('withdraw')}
-            className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-xs sm:text-sm font-bold inline-flex items-center gap-1.5 transition-colors"
+            className="h-[40px] px-4 rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold inline-flex items-center gap-1.5"
           >
             <ArrowUpRight className="w-4 h-4" />
             <span>Withdraw BDT</span>
@@ -673,118 +690,108 @@ export const WalletPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4 Balance Cards (3 Wallets + Locked Pending Withdrawals) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="p-6 rounded-2xl card-premium card-premium-interactive space-y-2.5">
+      {/* 4 Wallet Balance Tiles */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="zvy-card p-4 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-[#475569] dark:text-[#94A3B8]">
-              01. MAIN BALANCE (AVAILABLE)
+            <span className="text-[11px] font-extrabold text-[#6B7280] uppercase">
+              MAIN BALANCE
             </span>
-            <div className="w-8 h-8 rounded-lg bg-[#2563EB]/10 border border-[#2563EB]/20 flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-[#2563EB] dark:text-[#60A5FA]" />
-            </div>
+            <Wallet className="w-4 h-4 text-[#3B0A0A] dark:text-[#FCA5A5]" />
           </div>
-          <div className="text-3xl font-extrabold font-mono text-[#2563EB] dark:text-[#60A5FA]">
+          <div className="text-2xl font-extrabold font-mono text-[#3B0A0A] dark:text-[#FCA5A5]">
             ৳{currentUser.mainBalance}
           </div>
-          <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
-            Funded via bKash, Nagad, Rocket, Upay & Card deposits. Used for Diamond Top Up & Tournaments.
+          <p className="text-[11px] text-[#6B7280]">
+            For Diamond Top-Up & Rooms
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl card-premium card-premium-interactive space-y-2.5">
+        <div className="zvy-card p-4 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-[#475569] dark:text-[#94A3B8]">
-              02. INCOME BALANCE (WITHDRAWABLE)
+            <span className="text-[11px] font-extrabold text-[#6B7280] uppercase">
+              INCOME BALANCE
             </span>
-            <div className="w-8 h-8 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20 flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-[#10B981]" />
-            </div>
+            <Wallet className="w-4 h-4 text-[#059669]" />
           </div>
-          <div className="text-3xl font-extrabold font-mono text-[#10B981]">
+          <div className="text-2xl font-extrabold font-mono text-[#059669]">
             ৳{currentUser.incomeBalance}
           </div>
-          <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
-            Earned from verified tasks, tournament Booyah prizes, and referrals. Ready to withdraw.
+          <p className="text-[11px] text-[#6B7280]">
+            Tasks, Prizes & Referrals
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl card-premium card-premium-interactive space-y-2.5">
+        <div className="zvy-card p-4 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-[#475569] dark:text-[#94A3B8]">
-              03. BONUS BALANCE (PROMOTIONAL)
+            <span className="text-[11px] font-extrabold text-[#6B7280] uppercase">
+              BONUS BALANCE
             </span>
-            <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/20 flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-[#F59E0B]" />
-            </div>
+            <Wallet className="w-4 h-4 text-[#D97706]" />
           </div>
-          <div className="text-3xl font-extrabold font-mono text-[#F59E0B]">
+          <div className="text-2xl font-extrabold font-mono text-[#D97706]">
             ৳{currentUser.bonusBalance}
           </div>
-          <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
-            Welcome & promo credits. Convert 1:1 into Main Balance with 0% fee for Diamond purchases.
+          <p className="text-[11px] text-[#6B7280]">
+            Convert 1:1 to Main Wallet
           </p>
         </div>
 
-        <div className="p-6 rounded-2xl card-premium card-premium-interactive space-y-2.5">
+        <div className="zvy-card p-4 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-[#475569] dark:text-[#94A3B8]">
-              04. LOCKED PENDING PAYOUTS
+            <span className="text-[11px] font-extrabold text-[#6B7280] uppercase">
+              LOCKED PENDING
             </span>
-            <div className="w-8 h-8 rounded-lg bg-[#06B6D4]/10 border border-[#06B6D4]/20 flex items-center justify-center">
-              <Lock className="w-4 h-4 text-[#06B6D4]" />
-            </div>
+            <Lock className="w-4 h-4 text-[#0D3B66]" />
           </div>
-          <div className="text-3xl font-extrabold font-mono text-[#06B6D4]">
+          <div className="text-2xl font-extrabold font-mono text-[#0D3B66] dark:text-[#60A5FA]">
             ৳{lockedPendingBdt}
           </div>
-          <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
-            Immediately debited & reserved when a withdrawal is requested so funds can never be double-spent.
+          <p className="text-[11px] text-[#6B7280]">
+            Reserved for active payout
           </p>
         </div>
       </div>
 
-      {/* Active Pending Requests (With Instant User Cancellation & Auto-Refund) */}
+      {/* Active Pending Requests */}
       {(pendingDeposits.length > 0 || pendingWithdrawals.length > 0) && (
-        <div className="p-6 rounded-2xl card-premium space-y-4 border border-[#F59E0B]/40">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="zvy-card p-4 sm:p-5 space-y-3 border-[#F59E0B]">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-[#F59E0B]" />
-              <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                Active Pending Requests ({pendingDeposits.length + pendingWithdrawals.length})
+              <Clock className="w-4 h-4 text-[#D97706]" />
+              <h2 className="text-sm font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+                ACTIVE PENDING REQUESTS ({pendingDeposits.length + pendingWithdrawals.length})
               </h2>
             </div>
-            <span className="text-xs text-[#475569] dark:text-[#94A3B8]">
-              You can cancel any pending request before Admin processing. Cancelled withdrawals auto-refund immediately.
+            <span className="text-[11px] text-[#6B7280]">
+              Cancel anytime before admin review for instant auto-refund
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {pendingDeposits.map((dep) => (
               <div
                 key={dep.id}
-                className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
+                className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between gap-2 text-xs font-mono"
               >
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                    <span className="font-bold text-[#111827] dark:text-white">
                       DEPOSIT · {dep.id}
                     </span>
                     <WalletStatusBadge status={dep.status} />
                   </div>
-                  <div className="text-[#475569] dark:text-[#94A3B8]">
-                    {dep.method.toUpperCase()} ({dep.channel}) · TrxID: {dep.transactionId}
+                  <div className="text-[11px] text-[#6B7280]">
+                    {dep.method.toUpperCase()} · TrxID: {dep.transactionId}
                   </div>
-                  <div className="text-[#10B981] font-bold">
-                    Amount: +৳{dep.amountBdt} · {dep.createdAt}
-                  </div>
+                  <div className="text-[#059669] font-bold">+৳{dep.amountBdt}</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => cancelPendingWalletRequest('deposit', dep.id)}
-                  className="px-3 py-1.5 rounded-lg bg-[#EF4444]/15 hover:bg-[#EF4444] text-[#EF4444] hover:text-white font-sans font-semibold transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-[#FEE2E2] text-[#B91C1C] font-sans text-xs font-semibold"
                 >
-                  Cancel Request
+                  Cancel
                 </button>
               </div>
             ))}
@@ -792,33 +799,28 @@ export const WalletPage: React.FC = () => {
             {pendingWithdrawals.map((wth) => (
               <div
                 key={wth.id}
-                className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
+                className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between gap-2 text-xs font-mono"
               >
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+                    <span className="font-bold text-[#111827] dark:text-white">
                       WITHDRAW · {wth.id}
                     </span>
                     <WalletStatusBadge status={wth.status} />
-                    {wth.flaggedForReview && (
-                      <span className="px-2 py-0.5 rounded bg-[#EF4444]/15 text-[#EF4444] text-[10px] font-bold">
-                        Flagged for Review
-                      </span>
-                    )}
                   </div>
-                  <div className="text-[#475569] dark:text-[#94A3B8]">
-                    {wth.method.toUpperCase()} ({wth.receiverNumber}) · Source: {wth.walletSource}
+                  <div className="text-[11px] text-[#6B7280]">
+                    {wth.method.toUpperCase()} ({wth.receiverNumber})
                   </div>
-                  <div className="text-[#2563EB] font-bold">
-                    Locked: ৳{wth.amountBdt} (Net Payout: ৳{wth.netAmountBdt}) · {wth.createdAt}
+                  <div className="text-[#0D3B66] dark:text-[#60A5FA] font-bold">
+                    Locked: ৳{wth.amountBdt} (Net: ৳{wth.netAmountBdt})
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => cancelPendingWalletRequest('withdraw', wth.id)}
-                  className="px-3 py-1.5 rounded-lg bg-[#EF4444]/15 hover:bg-[#EF4444] text-[#EF4444] hover:text-white font-sans font-semibold transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-[#FEE2E2] text-[#B91C1C] font-sans text-xs font-semibold"
                 >
-                  Cancel & Refund ৳{wth.amountBdt}
+                  Cancel & Refund
                 </button>
               </div>
             ))}
@@ -826,31 +828,24 @@ export const WalletPage: React.FC = () => {
         </div>
       )}
 
-      {/* Zero-Fee Balance Transfer Tool */}
-      <form
-        onSubmit={handleTransfer}
-        className="p-6 sm:p-8 rounded-2xl card-premium space-y-5"
-      >
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="w-5 h-5 text-[#2563EB]" />
-            <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              Atomic 0%-Fee Internal Balance Transfer to Main Wallet
-            </h2>
-          </div>
-          <span className="text-xs font-mono text-[#10B981]">
-            Writes paired Debit + Credit entries atomically on server
-          </span>
+      {/* 0%-Fee Balance Transfer Card */}
+      <form onSubmit={handleTransfer} className="zvy-card p-4 sm:p-5 space-y-3.5">
+        <div className="flex items-center gap-2">
+          <span className="step-badge">1</span>
+          <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+            0%-FEE TRANSFER TO MAIN WALLET
+          </h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
           <div>
-            <label className="block text-xs font-semibold mb-1.5">Source Balance</label>
+            <label className="block text-xs font-medium mb-1">From Balance</label>
             <select
               value={fromWallet}
               onChange={(e) =>
                 setFromWallet(e.target.value as 'incomeBalance' | 'bonusBalance')
               }
-              className="w-full min-h-[44px] px-3.5 py-2.5 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="w-full h-[42px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             >
               <option value="incomeBalance">
                 Income Balance (Available: ৳{currentUser.incomeBalance})
@@ -861,49 +856,47 @@ export const WalletPage: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1.5">Amount to Transfer (Min ৳10 BDT)</label>
+            <label className="block text-xs font-medium mb-1">Amount (Min ৳10 BDT)</label>
             <input
               type="number"
               min={10}
               required
               value={transferAmount}
               onChange={(e) => setTransferAmount(Number(e.target.value))}
-              className="w-full min-h-[44px] px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             />
           </div>
           <button
             type="submit"
-            className="min-h-[44px] py-2.5 px-5 rounded-xl btn-primary text-xs font-semibold"
+            className="h-[42px] px-5 rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs font-semibold transition-colors"
           >
-            Transfer to Main Balance
+            Transfer to Main Wallet
           </button>
         </div>
       </form>
 
-      {/* Full Transaction History Ledger on Wallet Page */}
-      <div className="p-6 sm:p-8 rounded-2xl card-premium space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              Full Wallet Transaction History ({myTransactions.length} Entries)
+      {/* Transaction History List */}
+      <div className="zvy-card p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="step-badge">2</span>
+            <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+              TRANSACTION HISTORY ({myTransactions.length})
             </h2>
-            <p className="text-xs text-[#475569] dark:text-[#94A3B8] mt-0.5">
-              Complete double-entry ledger showing Date, Type, Amount, Method, Status badge, and Reference ID.
-            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="text"
               value={ledgerSearch}
               onChange={(e) => setLedgerSearch(e.target.value)}
-              placeholder="Search Ref ID, Method, Note..."
-              className="px-3.5 py-2 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              placeholder="Search ID, Method..."
+              className="h-[36px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             />
             <select
               value={ledgerTypeFilter}
               onChange={(e) => setLedgerTypeFilter(e.target.value)}
-              className="px-3 py-2 text-xs font-semibold rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="h-[36px] px-2.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             >
               <option value="All">All Types</option>
               <option value="Deposit">Deposit</option>
@@ -915,84 +908,61 @@ export const WalletPage: React.FC = () => {
               <option value="Task Reward">Task Reward</option>
               <option value="Referral Bonus">Referral Bonus</option>
               <option value="Balance Transfer">Balance Transfer</option>
-              <option value="Admin Adjustment">Admin Adjustment</option>
             </select>
             <select
               value={ledgerStatusFilter}
               onChange={(e) => setLedgerStatusFilter(e.target.value)}
-              className="px-3 py-2 text-xs font-semibold rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="h-[36px] px-2.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             >
-              <option value="All">All Statuses</option>
+              <option value="All">All Status</option>
               <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
               <option value="Completed">Completed</option>
               <option value="Rejected">Rejected</option>
-              <option value="Failed">Failed</option>
             </select>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[780px] text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#E2E8F0] dark:border-[#1E293B] text-xs text-[#475569] dark:text-[#94A3B8]">
-                <th className="py-3 px-3">Date & Time</th>
-                <th className="py-3 px-3">Type / Wallet</th>
-                <th className="py-3 px-3">Method</th>
-                <th className="py-3 px-3">Reference ID</th>
-                <th className="py-3 px-3">Description</th>
-                <th className="py-3 px-3 text-right">Amount (BDT)</th>
-                <th className="py-3 px-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E2E8F0] dark:divide-[#1E293B] text-xs font-mono">
-              {myTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#475569] dark:text-[#94A3B8] font-sans">
-                    No matching ledger transactions found.
-                  </td>
-                </tr>
-              ) : (
-                myTransactions.map((trx) => (
-                  <tr key={trx.id} className="hover:bg-[#F8FAFC] dark:hover:bg-[#0B1120]">
-                    <td className="py-3 px-3 text-[#475569] dark:text-[#94A3B8] whitespace-nowrap">
-                      {trx.createdAt}
-                    </td>
-                    <td className="py-3 px-3 font-sans">
-                      <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                        {trx.type}
-                      </div>
-                      <div className="text-[11px] font-mono text-[#475569] dark:text-[#94A3B8]">
-                        {trx.balanceType} Wallet ({trx.direction.toUpperCase()})
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded bg-[#EFF6FF] dark:bg-[#1E293B] text-[#2563EB] dark:text-[#60A5FA] font-semibold">
-                        {trx.method || 'Wallet'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <div className="font-bold text-[#2563EB]">{trx.referenceId}</div>
-                      <div className="text-[10px] text-[#475569] dark:text-[#94A3B8]">{trx.id}</div>
-                    </td>
-                    <td className="py-3 px-3 font-sans text-[#475569] dark:text-[#94A3B8] max-w-xs">
-                      {trx.description}
-                    </td>
-                    <td
-                      className={`py-3 px-3 text-right font-bold whitespace-nowrap ${
-                        trx.direction === 'credit' ? 'text-[#10B981]' : 'text-[#EF4444]'
-                      }`}
-                    >
-                      {trx.direction === 'credit' ? '+' : '-'}৳{trx.amountBdt}
-                    </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <WalletStatusBadge status={trx.status} />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="space-y-2">
+          {myTransactions.length === 0 ? (
+            <div className="py-8 text-center text-xs text-[#6B7280]">
+              No matching transactions found.
+            </div>
+          ) : (
+            myTransactions.map((trx) => (
+              <div
+                key={trx.id}
+                className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between gap-3 text-xs"
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-[#111827] dark:text-white">
+                      {trx.type}
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-[#E5E7EB] dark:bg-[#1E293B] text-[10px] font-mono font-bold">
+                      {trx.method || trx.balanceType}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-[#6B7280] truncate">
+                    {trx.description}
+                  </div>
+                  <div className="text-[10px] font-mono text-[#9CA3AF]">
+                    Ref: {trx.referenceId} · {trx.createdAt}
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 space-y-1">
+                  <div
+                    className={`font-mono font-extrabold text-sm ${
+                      trx.direction === 'credit' ? 'text-[#059669]' : 'text-[#DC2626]'
+                    }`}
+                  >
+                    {trx.direction === 'credit' ? '+' : '-'}৳{trx.amountBdt}
+                  </div>
+                  <WalletStatusBadge status={trx.status} />
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -1000,7 +970,7 @@ export const WalletPage: React.FC = () => {
 };
 
 /* ============================================================================
-   9. DEPOSIT PAGE (MANUAL SEND-MONEY + SCREENSHOT UPLOAD + HMAC WEBHOOK GATEWAY)
+   4. DEPOSIT PAGE (/deposit — STEP-NUMBERED ZVY CARDS FOR ADD MONEY)
    ============================================================================ */
 export const DepositPage: React.FC = () => {
   const {
@@ -1029,13 +999,16 @@ export const DepositPage: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center">
-        <button
-          onClick={() => navigate('login')}
-          className="px-5 py-2.5 rounded-xl bg-[#2563EB] text-white text-sm font-semibold"
-        >
-          Sign In to Deposit
-        </button>
+      <div className="max-w-[440px] mx-auto px-3.5 py-12 text-center">
+        <div className="zvy-card p-6 space-y-4">
+          <button
+            type="button"
+            onClick={() => navigate('login')}
+            className="w-full h-[42px] rounded-xl bg-[#3B0A0A] text-white text-xs font-semibold"
+          >
+            Login to Add Money
+          </button>
+        </div>
       </div>
     );
   }
@@ -1106,101 +1079,122 @@ export const DepositPage: React.FC = () => {
 
   const myDeposits = deposits.filter((d) => d.userId === currentUser.id);
 
+  const gatewayBadgeColors: Record<string, string> = {
+    bkash: 'bg-[#E2136E] text-white',
+    nagad: 'bg-[#F7941D] text-white',
+    rocket: 'bg-[#8C3494] text-white',
+    upay: 'bg-[#00529B] text-white',
+    card: 'bg-[#1A1F71] text-white',
+  };
+
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-[960px] mx-auto px-3 sm:px-5 py-6 space-y-4">
+      <div className="zvy-card p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div className="text-xs font-mono font-bold text-[#2563EB]">
-            MIN DEPOSIT: ৳{minDeposit} · MAX DEPOSIT: ৳{maxDeposit} · DEPOSIT FEE: {depositFeePct}%
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC] mt-1">
-            Deposit Funds to Main Wallet (BDT)
+          <h1 className="text-lg sm:text-xl font-extrabold text-[#111827] dark:text-[#F8FAFC]">
+            Add Money to Wallet (BDT)
           </h1>
-          <p className="text-sm text-[#475569] dark:text-[#94A3B8] mt-1">
-            Choose Instant Payment Gateway (verified via server HMAC-SHA256 webhook signature) or Manual Send Money with TrxID & Screenshot upload.
+          <p className="text-xs text-[#6B7280]">
+            Min ৳{minDeposit} · Max ৳{maxDeposit} · Main Balance: ৳{currentUser.mainBalance}
           </p>
         </div>
         <button
           type="button"
           onClick={() => navigate('wallet')}
-          className="px-4 py-2.5 rounded-xl btn-secondary text-xs font-semibold self-start"
+          className="px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold"
         >
-          ← Back to Wallet (Main: ৳{currentUser.mainBalance})
+          ← Back to Wallet
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Deposit Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <form
           onSubmit={(e) => handleSubmitDeposit(e, false)}
-          className="lg:col-span-7 p-5 sm:p-8 rounded-2xl card-premium space-y-5"
+          className="lg:col-span-7 zvy-card p-4 sm:p-6 space-y-4"
         >
-          {/* Channel Switcher */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-1.5 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]">
+          {/* Step 1: Channel & Payment Method */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="step-badge">1</span>
+              <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+                SELECT PAYMENT METHOD
+              </h2>
+            </div>
+            <span className="text-[11px] font-bold text-[#EF4444]">• REQUIRED</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
               onClick={() => setChannel('Manual')}
-              className={`min-h-[42px] py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
+              className={`p-3 rounded-xl border text-left transition-all ${
                 channel === 'Manual'
-                  ? 'bg-[#2563EB] text-white'
-                  : 'text-[#475569] dark:text-[#94A3B8]'
+                  ? 'border-2 border-[#3B0A0A] bg-[#FFF5F5] dark:bg-[#2A0B0B]'
+                  : 'border-[#E5E7EB] dark:border-[#1E293B]'
               }`}
             >
-              Manual Send Money (TrxID + Screenshot)
+              <div className="text-xs font-extrabold text-[#111827] dark:text-white">
+                Manual Send Money
+              </div>
+              <div className="text-[11px] text-[#6B7280]">
+                TrxID + Screenshot Verification
+              </div>
             </button>
+
             <button
               type="button"
               onClick={() => setChannel('Instant Gateway')}
-              className={`min-h-[42px] py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${
+              className={`p-3 rounded-xl border text-left transition-all ${
                 channel === 'Instant Gateway'
-                  ? 'bg-[#10B981] text-white'
-                  : 'text-[#475569] dark:text-[#94A3B8]'
+                  ? 'border-2 border-[#3B0A0A] bg-[#FFF5F5] dark:bg-[#2A0B0B]'
+                  : 'border-[#E5E7EB] dark:border-[#1E293B]'
               }`}
             >
-              Instant Gateway (HMAC Webhook Verified)
+              <div className="text-xs font-extrabold text-[#111827] dark:text-white">
+                ইনস্ট্যান্ট পেমেন্ট (Gateway)
+              </div>
+              <div className="text-[11px] text-[#6B7280]">
+                Auto Webhook Credit
+              </div>
             </button>
           </div>
 
-          {/* Active Bangladeshi Gateways + Card */}
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold">
-              1. Select Payment Method (bKash, Nagad, Rocket, Upay, or Card)
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-              {activeGateways.map((gw) => (
-                <button
-                  key={gw.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedMethod(gw.id);
-                    if (gw.id === 'card') {
-                      setChannel('Instant Gateway');
-                    }
-                  }}
-                  className={`min-h-[56px] p-3 rounded-xl border text-left transition-colors ${
-                    selectedMethod === gw.id
-                      ? 'border-[#2563EB] bg-[#EFF6FF] dark:bg-[#1E293B]'
-                      : 'border-[#E2E8F0] dark:border-[#1E293B]'
+          {/* Gateway Tiles */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {activeGateways.map((gw) => (
+              <button
+                key={gw.id}
+                type="button"
+                onClick={() => {
+                  setSelectedMethod(gw.id);
+                  if (gw.id === 'card') setChannel('Instant Gateway');
+                }}
+                className={`p-2.5 rounded-xl border text-center transition-all ${
+                  selectedMethod === gw.id
+                    ? 'border-2 border-[#3B0A0A] bg-[#FFF5F5] dark:bg-[#2A0B0B]'
+                    : 'border-[#E5E7EB] dark:border-[#1E293B]'
+                }`}
+              >
+                <span
+                  className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                    gatewayBadgeColors[gw.id] || 'bg-[#3B0A0A] text-white'
                   }`}
                 >
-                  <div className="text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC] flex items-center gap-1">
-                    {gw.id === 'card' && <CreditCard className="w-3.5 h-3.5 text-[#2563EB]" />}
-                    <span>{gw.name}</span>
-                  </div>
-                  <div className="text-[11px] font-mono text-[#475569] dark:text-[#94A3B8] mt-0.5 truncate">
-                    {gw.merchantNumber}
-                  </div>
-                </button>
-              ))}
-            </div>
+                  {gw.name}
+                </span>
+                <div className="text-[10px] font-mono text-[#6B7280] mt-1 truncate">
+                  {gw.merchantNumber}
+                </div>
+              </button>
+            ))}
           </div>
 
-          {/* Clear Step-by-Step Instructions & Limits */}
+          {/* Instructions Box */}
           {currentGateway && (
-            <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2 text-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                  {currentGateway.name} Payment Instructions
+            <div className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#111827] dark:text-white">
+                  {currentGateway.name} Number
                 </span>
                 {selectedMethod !== 'card' && (
                   <button
@@ -1209,53 +1203,53 @@ export const DepositPage: React.FC = () => {
                       navigator.clipboard.writeText(currentGateway.personalNumber);
                       addToast('Number Copied', `${currentGateway.personalNumber} copied.`, 'info');
                     }}
-                    className="text-[#2563EB] font-mono font-semibold inline-flex items-center gap-1"
+                    className="text-[#3B0A0A] dark:text-[#FCA5A5] font-mono font-bold inline-flex items-center gap-1"
                   >
                     <Copy className="w-3 h-3" />
                     <span>Copy {currentGateway.personalNumber}</span>
                   </button>
                 )}
               </div>
-              <div className="font-mono text-[#475569] dark:text-[#94A3B8]">
-                Merchant: {currentGateway.merchantNumber} · Personal Send Money: {currentGateway.personalNumber}
-              </div>
-              <p className="text-[#475569] dark:text-[#94A3B8] leading-relaxed">
+              <p className="text-[11px] text-[#4B5563] dark:text-[#94A3B8]">
                 {currentGateway.instructions}
               </p>
-              <div className="pt-1.5 border-t border-[#E2E8F0] dark:border-[#1E293B] flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-[#2563EB]">
-                <span>Limits: ৳{minDeposit} – ৳{maxDeposit} BDT</span>
+              <div className="pt-1 border-t border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between font-mono text-[11px]">
                 <span>Fee: {depositFeePct}% (৳{depositFeeBdt})</span>
-                <span className="text-[#10B981] font-bold">Net Credit: +৳{netCreditBdt} BDT</span>
+                <span className="font-extrabold text-[#059669]">
+                  Net Credit: +৳{netCreditBdt} BDT
+                </span>
               </div>
             </div>
           )}
 
-          {/* Quick Amount Presets */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold">Quick Amount Selection (BDT)</label>
-            <div className="flex flex-wrap gap-2">
-              {[50, 100, 200, 500, 1000, 2500, 5000].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setAmountBdt(preset)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-colors ${
-                    amountBdt === preset
-                      ? 'bg-[#2563EB] text-white border-[#2563EB]'
-                      : 'bg-[#F8FAFC] dark:bg-[#0B1120] border-[#E2E8F0] dark:border-[#1E293B]'
-                  }`}
-                >
-                  ৳{preset}
-                </button>
-              ))}
-            </div>
+          {/* Step 2: Amount & Sender Details */}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="step-badge">2</span>
+            <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+              ENTER AMOUNT & TRXID
+            </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-wrap gap-1.5">
+            {[50, 100, 200, 500, 1000, 2500].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setAmountBdt(preset)}
+                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold border ${
+                  amountBdt === preset
+                    ? 'bg-[#3B0A0A] text-white border-[#3B0A0A]'
+                    : 'bg-white dark:bg-[#0B1120] border-[#D1D5DB] dark:border-[#1E293B]'
+                }`}
+              >
+                ৳{preset}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold mb-1">
-                Deposit Amount (Min ৳{minDeposit} – Max ৳{maxDeposit})
-              </label>
+              <label className="block text-xs font-medium mb-1">Amount (BDT)</label>
               <input
                 type="number"
                 min={minDeposit}
@@ -1263,13 +1257,13 @@ export const DepositPage: React.FC = () => {
                 required
                 value={amountBdt}
                 onChange={(e) => setAmountBdt(Number(e.target.value))}
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
               />
             </div>
             {selectedMethod !== 'card' && (
               <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Sender {selectedMethod.toUpperCase()} Number (11 Digits)
+                <label className="block text-xs font-medium mb-1">
+                  Sender {selectedMethod.toUpperCase()} Number
                 </label>
                 <input
                   type="text"
@@ -1277,35 +1271,34 @@ export const DepositPage: React.FC = () => {
                   value={senderNumber}
                   onChange={(e) => setSenderNumber(e.target.value)}
                   placeholder="017XXXXXXXX"
-                  className="w-full min-h-[44px] px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                  className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
                 />
               </div>
             )}
           </div>
 
           {channel === 'Manual' ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Transaction ID (TrxID from SMS / Mobile Banking App)
+                <label className="block text-xs font-medium mb-1">
+                  Transaction ID (TrxID)
                 </label>
                 <input
                   type="text"
                   required
                   value={transactionId}
                   onChange={(e) => setTransactionId(e.target.value)}
-                  placeholder="e.g. BKS984012KL"
-                  className="w-full min-h-[44px] px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                  placeholder="Enter TrxID (e.g. BKS984012KL)"
+                  className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
                 />
               </div>
 
-              {/* Payment Screenshot Proof Upload */}
-              <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-dashed border-[#CBD5E1] dark:border-[#334155] space-y-2.5">
+              <div className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-dashed border-[#D1D5DB] dark:border-[#334155] space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold flex items-center gap-1.5">
-                    <Upload className="w-4 h-4 text-[#2563EB]" />
-                    <span>Upload Payment Screenshot Proof (Optional, speeds up verification)</span>
-                  </label>
+                  <span className="text-xs font-medium flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5 text-[#3B0A0A]" />
+                    <span>Payment Screenshot (Optional)</span>
+                  </span>
                   {screenshotDataUrl && (
                     <button
                       type="button"
@@ -1313,9 +1306,9 @@ export const DepositPage: React.FC = () => {
                         setScreenshotDataUrl('');
                         setScreenshotFileName('');
                       }}
-                      className="text-[11px] text-[#EF4444] hover:underline"
+                      className="text-[11px] text-[#DC2626] hover:underline"
                     >
-                      Remove Screenshot
+                      Remove
                     </button>
                   )}
                 </div>
@@ -1323,136 +1316,97 @@ export const DepositPage: React.FC = () => {
                   type="file"
                   accept="image/*"
                   onChange={handleScreenshotFileChange}
-                  className="block w-full text-xs text-[#475569] dark:text-[#94A3B8] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#2563EB]/10 file:text-[#2563EB] hover:file:bg-[#2563EB]/20"
+                  className="block w-full text-xs text-[#6B7280] file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3B0A0A] file:text-white"
                 />
                 {screenshotDataUrl && (
-                  <div className="flex items-center gap-3 pt-1">
-                    <img
-                      src={screenshotDataUrl}
-                      alt="Payment proof preview"
-                      className="w-16 h-16 object-cover rounded-lg border border-[#E2E8F0] dark:border-[#1E293B]"
-                    />
-                    <div className="text-xs font-mono text-[#10B981]">
-                      ✓ Screenshot attached ({screenshotFileName || 'proof.png'})
-                    </div>
+                  <div className="text-[11px] font-mono text-[#059669]">
+                    ✓ Attached: {screenshotFileName || 'screenshot.png'}
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="p-4 rounded-xl bg-[#10B981]/5 border border-[#10B981]/30 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                  Server Webhook Signature Verification Mode
-                </span>
-                <span className="text-[11px] font-mono text-[#10B981]">
-                  HMAC-SHA256 Signed Callback
-                </span>
-              </div>
-              <p className="text-xs text-[#475569] dark:text-[#94A3B8]">
-                The frontend never credits your balance directly. Instead, the server verifies the HMAC-SHA256 signature on the payment gateway callback before writing a credit entry to the ledger.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <div className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] space-y-2">
+              <div className="text-xs font-bold">Instant Gateway Verification Mode</div>
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setGatewayOutcome('success')}
-                  className={`py-2 px-3 rounded-lg text-xs font-semibold border text-left ${
+                  className={`py-2 px-3 rounded-lg text-xs font-semibold border ${
                     gatewayOutcome === 'success'
-                      ? 'bg-[#10B981] text-white border-[#10B981]'
-                      : 'bg-white dark:bg-[#0B1120] border-[#E2E8F0] dark:border-[#1E293B]'
+                      ? 'bg-[#00C853] text-white border-[#00C853]'
+                      : 'bg-white dark:bg-[#111827] border-[#D1D5DB]'
                   }`}
                 >
-                  ✓ Test Deposit Success (Valid Webhook)
+                  ✓ Verified Callback
                 </button>
                 <button
                   type="button"
                   onClick={() => setGatewayOutcome('fail')}
-                  className={`py-2 px-3 rounded-lg text-xs font-semibold border text-left ${
+                  className={`py-2 px-3 rounded-lg text-xs font-semibold border ${
                     gatewayOutcome === 'fail'
-                      ? 'bg-[#EF4444] text-white border-[#EF4444]'
-                      : 'bg-white dark:bg-[#0B1120] border-[#E2E8F0] dark:border-[#1E293B]'
+                      ? 'bg-[#DC2626] text-white border-[#DC2626]'
+                      : 'bg-white dark:bg-[#111827] border-[#D1D5DB]'
                   }`}
                 >
-                  ✕ Test Deposit Fail (Declined Callback)
+                  ✕ Declined Callback
                 </button>
               </div>
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-2.5">
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 min-h-[48px] py-3 px-4 rounded-xl btn-primary text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+              className="flex-1 h-[44px] rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
             >
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <CheckCircle2 className="w-4 h-4" />
               <span>
                 {submitting
-                  ? 'Processing on Server...'
-                  : channel === 'Instant Gateway'
-                  ? gatewayOutcome === 'success'
-                    ? `Pay & Verify Webhook (+৳${netCreditBdt})`
-                    : `Simulate Failed Gateway Deposit (৳${amountBdt})`
-                  : `Submit Manual Deposit Request (৳${amountBdt})`}
+                  ? 'Processing...'
+                  : `Confirm Deposit (+৳${netCreditBdt} BDT)`}
               </span>
             </button>
-
             {lastIdempotencyKey && (
               <button
                 type="button"
                 onClick={(e) => handleSubmitDeposit(e, true)}
-                className="min-h-[48px] px-4 py-2.5 rounded-xl border border-[#2563EB] text-[#2563EB] text-xs font-mono font-bold hover:bg-[#2563EB]/10 transition-colors"
-                title="Re-sends the exact same X-Idempotency-Key to verify duplicate click protection"
+                className="h-[44px] px-3 rounded-xl border border-[#3B0A0A] text-[#3B0A0A] text-xs font-mono font-bold"
               >
-                Test Duplicate Click (Idempotency)
+                Retry Idempotent
               </button>
             )}
           </div>
         </form>
 
         {/* Deposit History */}
-        <div className="lg:col-span-5 p-5 sm:p-6 rounded-2xl card-premium space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              My Deposit History ({myDeposits.length})
-            </h2>
-            <span className="text-xs font-mono text-[#475569] dark:text-[#94A3B8]">
-              Live Server Status
-            </span>
-          </div>
-          <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+        <div className="lg:col-span-5 zvy-card p-4 sm:p-5 space-y-3">
+          <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+            MY DEPOSITS ({myDeposits.length})
+          </h2>
+          <div className="space-y-2 max-h-[540px] overflow-y-auto pr-1">
             {myDeposits.map((dep) => (
               <div
                 key={dep.id}
-                className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2 text-xs font-mono"
+                className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] space-y-1.5 text-xs font-mono"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                    {dep.id} · {dep.method.toUpperCase()} ({dep.channel})
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#111827] dark:text-white">
+                    {dep.id} · {dep.method.toUpperCase()}
                   </span>
                   <WalletStatusBadge status={dep.status} />
                 </div>
-                <div className="flex items-center justify-between text-[#475569] dark:text-[#94A3B8]">
+                <div className="flex items-center justify-between text-[11px] text-[#6B7280]">
                   <span className="truncate">TrxID: {dep.transactionId}</span>
-                  <span className="font-bold text-[#10B981]">
-                    +৳{dep.netCreditBdt ?? dep.amountBdt} BDT
+                  <span className="font-extrabold text-[#059669]">
+                    +৳{dep.netCreditBdt ?? dep.amountBdt}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-[#475569] dark:text-[#94A3B8]">
-                  <span>Sender: {dep.senderNumber}</span>
-                  <span>{dep.createdAt}</span>
-                </div>
                 {dep.screenshotUrl && (
-                  <div className="pt-1 flex items-center gap-2">
-                    <ImageIcon className="w-3.5 h-3.5 text-[#2563EB]" />
-                    <span className="text-[11px] text-[#2563EB] font-sans">
-                      Payment proof screenshot attached
-                    </span>
-                  </div>
-                )}
-                {dep.adminReason && (
-                  <div className="p-2 rounded-lg bg-[#EF4444]/10 text-[#EF4444] font-sans text-xs">
-                    Note: {dep.adminReason}
+                  <div className="text-[10px] text-[#0D3B66] font-sans flex items-center gap-1">
+                    <ImageIcon className="w-3 h-3" />
+                    <span>Screenshot attached</span>
                   </div>
                 )}
                 {dep.status === 'Pending' && (
@@ -1460,9 +1414,9 @@ export const DepositPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => cancelPendingWalletRequest('deposit', dep.id)}
-                      className="px-3 py-1 rounded-lg bg-[#EF4444]/15 hover:bg-[#EF4444] text-[#EF4444] hover:text-white font-sans font-semibold transition-colors"
+                      className="px-2.5 py-1 rounded bg-[#FEE2E2] text-[#B91C1C] font-sans text-[11px] font-semibold"
                     >
-                      Cancel Pending Request
+                      Cancel
                     </button>
                   </div>
                 )}
@@ -1476,7 +1430,7 @@ export const DepositPage: React.FC = () => {
 };
 
 /* ============================================================================
-   10. WITHDRAW PAGE (IMMEDIATE PENDING LOCK, RE-AUTH/OTP & HIGH-VALUE FLAGGING)
+   5. WITHDRAW PAGE (/withdraw — STEP-NUMBERED ZVY CARDS FOR PAYOUTS)
    ============================================================================ */
 export const WithdrawPage: React.FC = () => {
   const {
@@ -1506,13 +1460,16 @@ export const WithdrawPage: React.FC = () => {
 
   if (!currentUser) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-20 text-center">
-        <button
-          onClick={() => navigate('login')}
-          className="px-5 py-2.5 rounded-xl bg-[#2563EB] text-white text-sm font-semibold"
-        >
-          Sign In to Withdraw
-        </button>
+      <div className="max-w-[440px] mx-auto px-3.5 py-12 text-center">
+        <div className="zvy-card p-6 space-y-4">
+          <button
+            type="button"
+            onClick={() => navigate('login')}
+            className="w-full h-[42px] rounded-xl bg-[#3B0A0A] text-white text-xs font-semibold"
+          >
+            Login to Withdraw
+          </button>
+        </div>
       </div>
     );
   }
@@ -1521,7 +1478,7 @@ export const WithdrawPage: React.FC = () => {
   const maxWithdraw = paymentSettings.maxWithdrawBdt || 50000;
   const manualReviewThreshold = paymentSettings.manualReviewThresholdBdt || 5000;
   const processingTimeText =
-    paymentSettings.processingTimeText || '30–120 Minutes (Instant Lock)';
+    paymentSettings.processingTimeText || '30–120 Minutes';
   const feeBdt = Math.round((Number(amountBdt || 0) * paymentSettings.withdrawFeePercent) / 100);
   const netAmount = Math.max(0, Number(amountBdt || 0) - feeBdt);
   const availableInSelectedWallet =
@@ -1550,46 +1507,45 @@ export const WithdrawPage: React.FC = () => {
   const myWithdrawals = withdrawals.filter((w) => w.userId === currentUser.id);
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-[960px] mx-auto px-3 sm:px-5 py-6 space-y-4">
+      <div className="zvy-card p-4 sm:p-5 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div className="text-xs font-mono font-bold text-[#10B981]">
-            MIN: ৳{minWithdraw} · MAX: ৳{maxWithdraw} · FEE: {paymentSettings.withdrawFeePercent}% · PROCESSING: {processingTimeText}
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC] mt-1">
-            Withdraw Earnings to Mobile Banking
+          <h1 className="text-lg sm:text-xl font-extrabold text-[#111827] dark:text-[#F8FAFC]">
+            Withdraw Earnings (bKash / Nagad / Rocket / Upay)
           </h1>
-          <p className="text-sm text-[#475569] dark:text-[#94A3B8] mt-1">
-            Requested amounts are immediately locked as <span className="font-mono font-bold">Pending</span> in the server double-entry ledger to prevent double-spending.
+          <p className="text-xs text-[#6B7280]">
+            Min ৳{minWithdraw} · Fee {paymentSettings.withdrawFeePercent}% · Locked Pending: ৳{lockedPendingBdt}
           </p>
         </div>
-        <div className="flex items-center gap-3 self-start">
-          <div className="px-3.5 py-2 rounded-xl bg-[#06B6D4]/10 border border-[#06B6D4]/30 text-xs font-mono text-[#06B6D4]">
-            Locked Pending: ৳{lockedPendingBdt}
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('wallet')}
-            className="px-4 py-2.5 rounded-xl btn-secondary text-xs font-semibold"
-          >
-            ← Back to Wallet
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => navigate('wallet')}
+          className="px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#1E293B] text-xs font-semibold"
+        >
+          ← Back to Wallet
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <form
           onSubmit={(e) => handleWithdrawSubmit(e, false)}
-          className="lg:col-span-7 p-5 sm:p-8 rounded-2xl card-premium space-y-5"
+          className="lg:col-span-7 zvy-card p-4 sm:p-6 space-y-4"
         >
+          <div className="flex items-center gap-2">
+            <span className="step-badge">1</span>
+            <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+              SELECT WALLET & PAYOUT METHOD
+            </h2>
+          </div>
+
           <div>
-            <label className="block text-xs font-semibold mb-1.5">1. Select Wallet Source</label>
+            <label className="block text-xs font-medium mb-1">Wallet Source</label>
             <select
               value={walletSource}
               onChange={(e) =>
                 setWalletSource(e.target.value as 'incomeBalance' | 'mainBalance')
               }
-              className="w-full min-h-[44px] px-3.5 py-2.5 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+              className="w-full h-[42px] px-3 text-xs rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             >
               <option value="incomeBalance">
                 Income Balance (Available: ৳{currentUser.incomeBalance} BDT)
@@ -1600,32 +1556,34 @@ export const WithdrawPage: React.FC = () => {
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold mb-1.5">
-              2. Select Payout Method
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {activeGateways.map((gw) => (
-                <button
-                  key={gw.id}
-                  type="button"
-                  onClick={() => setMethod(gw.id)}
-                  className={`min-h-[44px] p-3 rounded-xl border text-left text-xs font-bold transition-colors ${
-                    method === gw.id
-                      ? 'border-[#2563EB] bg-[#EFF6FF] dark:bg-[#1E293B] text-[#2563EB] dark:text-white'
-                      : 'border-[#E2E8F0] dark:border-[#1E293B]'
-                  }`}
-                >
-                  {gw.name}
-                </button>
-              ))}
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {activeGateways.map((gw) => (
+              <button
+                key={gw.id}
+                type="button"
+                onClick={() => setMethod(gw.id)}
+                className={`h-[42px] px-3 rounded-xl border text-xs font-extrabold transition-all ${
+                  method === gw.id
+                    ? 'border-2 border-[#3B0A0A] bg-[#FFF5F5] dark:bg-[#2A0B0B] text-[#3B0A0A] dark:text-white'
+                    : 'border-[#E5E7EB] dark:border-[#1E293B]'
+                }`}
+              >
+                {gw.name}
+              </button>
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex items-center gap-2 pt-1">
+            <span className="step-badge">2</span>
+            <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+              RECEIVER NUMBER & SECURITY PIN
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold mb-1">
-                Personal {method.toUpperCase()} Account Number (11 Digits)
+              <label className="block text-xs font-medium mb-1">
+                Personal {method.toUpperCase()} Number
               </label>
               <input
                 type="text"
@@ -1633,12 +1591,12 @@ export const WithdrawPage: React.FC = () => {
                 value={receiverNumber}
                 onChange={(e) => setReceiverNumber(e.target.value)}
                 placeholder="017XXXXXXXX"
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">
-                Withdraw Amount (Min ৳{minWithdraw} – Max ৳{maxWithdraw})
+              <label className="block text-xs font-medium mb-1">
+                Withdraw Amount (Min ৳{minWithdraw})
               </label>
               <input
                 type="number"
@@ -1647,21 +1605,15 @@ export const WithdrawPage: React.FC = () => {
                 required
                 value={amountBdt}
                 onChange={(e) => setAmountBdt(Number(e.target.value))}
-                className="w-full min-h-[44px] px-3.5 py-2.5 text-sm font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
               />
             </div>
           </div>
 
-          {/* Security Confirmation (Account Password or 6-Digit Security PIN / OTP) */}
-          <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2">
-            <label className="block text-xs font-semibold flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <KeyRound className="w-4 h-4 text-[#2563EB]" />
-                <span>Security Confirmation: Account Password or 6-Digit OTP/PIN</span>
-              </span>
-              <span className="font-mono text-[11px] text-[#10B981]">
-                Verified on Server before Lock
-              </span>
+          <div>
+            <label className="block text-xs font-medium mb-1 flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5 text-[#3B0A0A]" />
+              <span>Security Confirmation (Password or 6-Digit PIN)</span>
             </label>
             <input
               type="password"
@@ -1669,113 +1621,70 @@ export const WithdrawPage: React.FC = () => {
               minLength={4}
               value={authConfirmCode}
               onChange={(e) => setAuthConfirmCode(e.target.value)}
-              placeholder="Enter account password or 6-digit OTP (e.g. 123456)"
-              className="w-full min-h-[42px] px-3.5 py-2 text-xs font-mono rounded-xl bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-[#1E293B]"
+              placeholder="123456"
+              className="w-full h-[42px] px-3 text-xs font-mono rounded-xl bg-white dark:bg-[#0B1120] border border-[#D1D5DB] dark:border-[#1E293B]"
             />
-            <p className="text-[11px] text-[#475569] dark:text-[#94A3B8]">
-              Re-authentication protects your wallet against unauthorized session access. Enter your account password or a 6-digit security PIN (e.g. <span className="font-mono">123456</span>).
-            </p>
           </div>
 
-          {/* Fee, Net Payout, Processing Time & High-Value Warning */}
-          <div className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2 text-xs font-mono">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span>Available in Selected Wallet: ৳{availableInSelectedWallet} BDT</span>
-              <span>Processing Fee ({paymentSettings.withdrawFeePercent}%): ৳{feeBdt}</span>
-              <span className="font-bold text-[#10B981]">Net Payout: ৳{netAmount} BDT</span>
+          <div className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] space-y-1.5 text-xs font-mono">
+            <div className="flex items-center justify-between">
+              <span>Available: ৳{availableInSelectedWallet}</span>
+              <span>Fee: ৳{feeBdt}</span>
+              <span className="font-extrabold text-[#059669]">Net Payout: ৳{netAmount}</span>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#475569] dark:text-[#94A3B8] pt-1 border-t border-[#E2E8F0] dark:border-[#1E293B]">
-              <span>Expected Processing Time: {processingTimeText}</span>
-              <span>Manual Review Threshold: ≥ ৳{manualReviewThreshold} BDT</span>
+            <div className="text-[11px] text-[#6B7280] font-sans">
+              Expected Time: {processingTimeText}
             </div>
             {Number(amountBdt) >= manualReviewThreshold && (
-              <div className="p-2 rounded-lg bg-[#F59E0B]/15 text-[#F59E0B] font-sans flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>
-                  This withdrawal is ≥ ৳{manualReviewThreshold} and will be automatically flagged for senior Admin compliance review.
-                </span>
+              <div className="p-2 rounded bg-[#FEF3C7] text-[#B45309] font-sans text-[11px] flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>Withdrawals ≥ ৳{manualReviewThreshold} require senior admin review.</span>
               </div>
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 min-h-[48px] py-3 px-4 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-xs sm:text-sm font-semibold transition-colors disabled:opacity-60"
-            >
-              {submitting
-                ? 'Locking Funds on Server...'
-                : `Lock ৳${amountBdt} & Request Payout (Net ৳${netAmount})`}
-            </button>
-
-            {lastWithdrawIdemKey && (
-              <button
-                type="button"
-                onClick={(e) => handleWithdrawSubmit(e, true)}
-                className="min-h-[48px] px-4 py-2.5 rounded-xl border border-[#2563EB] text-[#2563EB] text-xs font-mono font-bold hover:bg-[#2563EB]/10 transition-colors"
-                title="Re-sends the exact same X-Idempotency-Key to verify duplicate withdrawal protection"
-              >
-                Test Duplicate Click
-              </button>
-            )}
-          </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full h-[44px] rounded-xl bg-[#3B0A0A] hover:bg-[#4C0E0E] text-white text-xs sm:text-sm font-bold transition-colors disabled:opacity-60"
+          >
+            {submitting
+              ? 'Locking Funds...'
+              : `Request Payout (Net ৳${netAmount} BDT)`}
+          </button>
         </form>
 
-        <div className="lg:col-span-5 p-5 sm:p-6 rounded-2xl card-premium space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-              Withdrawal History ({myWithdrawals.length})
-            </h2>
-            <span className="text-xs font-mono text-[#475569] dark:text-[#94A3B8]">
-              Atomic Lock & Refund
-            </span>
-          </div>
-          <div className="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+        {/* Withdrawal History */}
+        <div className="lg:col-span-5 zvy-card p-4 sm:p-5 space-y-3">
+          <h2 className="text-sm sm:text-base font-extrabold text-[#111827] dark:text-[#F8FAFC] uppercase">
+            MY WITHDRAWALS ({myWithdrawals.length})
+          </h2>
+          <div className="space-y-2 max-h-[540px] overflow-y-auto pr-1">
             {myWithdrawals.map((w) => (
               <div
                 key={w.id}
-                className="p-4 rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] space-y-2 text-xs font-mono"
+                className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] space-y-1.5 text-xs font-mono"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                    {w.id} · {w.method.toUpperCase()} ({w.receiverNumber})
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#111827] dark:text-white">
+                    {w.id} · {w.method.toUpperCase()}
                   </span>
                   <WalletStatusBadge status={w.status} />
                 </div>
-                <div className="flex items-center justify-between text-[#475569] dark:text-[#94A3B8]">
-                  <span>Gross: ৳{w.amountBdt} (Fee: ৳{w.feeBdt})</span>
-                  <span className="font-bold text-[#2563EB]">Net: ৳{w.netAmountBdt} BDT</span>
+                <div className="flex items-center justify-between text-[11px] text-[#6B7280]">
+                  <span>To: {w.receiverNumber}</span>
+                  <span className="font-extrabold text-[#0D3B66] dark:text-[#60A5FA]">
+                    Net: ৳{w.netAmountBdt}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-[#475569] dark:text-[#94A3B8]">
-                  <span>Source: {w.walletSource}</span>
-                  <span>{w.createdAt}</span>
-                </div>
-                {w.flaggedForReview && (
-                  <div className="px-2.5 py-1 rounded bg-[#F59E0B]/15 text-[#F59E0B] font-sans text-[11px] flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    <span>Flagged for Review: {w.flagReason || 'High-value withdrawal'}</span>
-                  </div>
-                )}
-                {(w.adminNote || w.adminReason) && (
-                  <div
-                    className={`p-2 rounded-lg font-sans text-xs ${
-                      w.status === 'Rejected'
-                        ? 'bg-[#EF4444]/10 text-[#EF4444]'
-                        : 'bg-[#10B981]/10 text-[#10B981]'
-                    }`}
-                  >
-                    {w.adminReason || w.adminNote}
-                  </div>
-                )}
                 {w.status === 'Pending' && (
                   <div className="pt-1 flex justify-end">
                     <button
                       type="button"
                       onClick={() => cancelPendingWalletRequest('withdraw', w.id)}
-                      className="px-3 py-1 rounded-lg bg-[#EF4444]/15 hover:bg-[#EF4444] text-[#EF4444] hover:text-white font-sans font-semibold transition-colors"
+                      className="px-2.5 py-1 rounded bg-[#FEE2E2] text-[#B91C1C] font-sans text-[11px] font-semibold"
                     >
-                      Cancel & Auto-Refund ৳{w.amountBdt}
+                      Cancel & Refund ৳{w.amountBdt}
                     </button>
                   </div>
                 )}
@@ -1789,7 +1698,7 @@ export const WithdrawPage: React.FC = () => {
 };
 
 /* ============================================================================
-   11. UNIFIED TRANSACTION HISTORY LEDGER
+   6. UNIFIED TRANSACTIONS PAGE (/transactions)
    ============================================================================ */
 export const TransactionsPage: React.FC = () => {
   const { transactions, currentUser } = useApp();
@@ -1807,7 +1716,6 @@ export const TransactionsPage: React.FC = () => {
     'Task Reward',
     'Referral Bonus',
     'Balance Transfer',
-    'Admin Adjustment',
   ];
 
   const statuses = ['All', 'Pending', 'Approved', 'Completed', 'Rejected', 'Failed'];
@@ -1822,22 +1730,22 @@ export const TransactionsPage: React.FC = () => {
   });
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-[960px] mx-auto px-3 sm:px-5 py-6 space-y-4">
+      <div className="zvy-card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] dark:text-[#F8FAFC]">
-            Unified Double-Entry Financial Ledger
+          <h1 className="text-lg sm:text-xl font-extrabold text-[#111827] dark:text-[#F8FAFC]">
+            Wallet & Order Transaction Ledger
           </h1>
-          <p className="text-sm text-[#475569] dark:text-[#94A3B8] mt-1">
-            Complete audit trail of deposits, withdrawals, refunds, diamond orders, tournament fees, prizes, and task rewards.
+          <p className="text-xs text-[#6B7280]">
+            Complete log of all top-ups, deposits, withdrawals, and rewards.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Filter className="w-4 h-4 text-[#2563EB] shrink-0" />
+          <Filter className="w-4 h-4 text-[#3B0A0A] shrink-0" />
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="min-h-[40px] px-3.5 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-[#1E293B]"
+            className="h-[36px] px-3 text-xs font-semibold rounded-xl bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B]"
           >
             {types.map((tItem) => (
               <option key={tItem} value={tItem}>
@@ -1848,7 +1756,7 @@ export const TransactionsPage: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="min-h-[40px] px-3.5 py-2 text-xs font-semibold rounded-xl bg-white dark:bg-[#111827] border border-[#E2E8F0] dark:border-[#1E293B]"
+            className="h-[36px] px-3 text-xs font-semibold rounded-xl bg-white dark:bg-[#111827] border border-[#D1D5DB] dark:border-[#1E293B]"
           >
             {statuses.map((st) => (
               <option key={st} value={st}>
@@ -1859,59 +1767,36 @@ export const TransactionsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-5 sm:p-6 rounded-2xl card-premium overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left border-collapse">
-          <thead>
-            <tr className="border-b border-[#E2E8F0] dark:border-[#1E293B] text-xs text-[#475569] dark:text-[#94A3B8]">
-              <th className="py-3 px-3">Date & Time</th>
-              <th className="py-3 px-3">Type & Wallet</th>
-              <th className="py-3 px-3">Method</th>
-              <th className="py-3 px-3">Reference ID</th>
-              <th className="py-3 px-3">Description</th>
-              <th className="py-3 px-3 text-right">Amount</th>
-              <th className="py-3 px-3">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E2E8F0] dark:divide-[#1E293B] text-xs font-mono">
-            {filtered.map((trx) => (
-              <tr key={trx.id} className="hover:bg-[#F8FAFC] dark:hover:bg-[#0B1120]">
-                <td className="py-3 px-3 text-[#475569] dark:text-[#94A3B8] whitespace-nowrap">
-                  {trx.createdAt}
-                </td>
-                <td className="py-3 px-3 font-sans">
-                  <div className="font-bold text-[#0F172A] dark:text-[#F8FAFC]">
-                    {trx.type}
-                  </div>
-                  <div className="text-[11px] font-mono text-[#475569] dark:text-[#94A3B8]">
-                    {trx.balanceType} Wallet ({trx.direction.toUpperCase()})
-                  </div>
-                </td>
-                <td className="py-3 px-3 whitespace-nowrap">
-                  <span className="px-2 py-0.5 rounded bg-[#EFF6FF] dark:bg-[#1E293B] text-[#2563EB] dark:text-[#60A5FA] font-semibold">
-                    {trx.method || 'Wallet'}
-                  </span>
-                </td>
-                <td className="py-3 px-3 whitespace-nowrap">
-                  <div className="font-bold text-[#2563EB]">{trx.referenceId}</div>
-                  <div className="text-[10px] text-[#475569] dark:text-[#94A3B8]">{trx.id}</div>
-                </td>
-                <td className="py-3 px-3 font-sans text-[#475569] dark:text-[#94A3B8]">
-                  {trx.description}
-                </td>
-                <td
-                  className={`py-3 px-3 text-right font-bold whitespace-nowrap ${
-                    trx.direction === 'credit' ? 'text-[#10B981]' : 'text-[#EF4444]'
-                  }`}
-                >
-                  {trx.direction === 'credit' ? '+' : '-'}৳{trx.amountBdt}
-                </td>
-                <td className="py-3 px-3 whitespace-nowrap">
-                  <WalletStatusBadge status={trx.status} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="zvy-card p-4 sm:p-5 space-y-2">
+        {filtered.map((trx) => (
+          <div
+            key={trx.id}
+            className="p-3 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] flex items-center justify-between gap-3 text-xs"
+          >
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[#111827] dark:text-white">{trx.type}</span>
+                <span className="px-2 py-0.5 rounded bg-[#E5E7EB] dark:bg-[#1E293B] text-[10px] font-mono">
+                  {trx.method || trx.balanceType}
+                </span>
+              </div>
+              <div className="text-[11px] text-[#6B7280] truncate">{trx.description}</div>
+              <div className="text-[10px] font-mono text-[#9CA3AF]">
+                {trx.referenceId} · {trx.createdAt}
+              </div>
+            </div>
+            <div className="text-right shrink-0 space-y-1">
+              <div
+                className={`font-mono font-extrabold text-sm ${
+                  trx.direction === 'credit' ? 'text-[#059669]' : 'text-[#DC2626]'
+                }`}
+              >
+                {trx.direction === 'credit' ? '+' : '-'}৳{trx.amountBdt}
+              </div>
+              <WalletStatusBadge status={trx.status} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

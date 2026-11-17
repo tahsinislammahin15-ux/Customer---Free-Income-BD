@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
-import { Gem, Trophy, Coins, Wallet, Sparkles } from 'lucide-react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -43,52 +42,15 @@ const AppRoutesShell: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
-      document
-        .querySelectorAll('.reveal-on-scroll')
-        .forEach((el) => el.classList.add('is-visible'));
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.08, rootMargin: '0px 0px -32px 0px' }
-    );
-
-    const timer = window.setTimeout(() => {
-      const elements = document.querySelectorAll('.reveal-on-scroll');
-      elements.forEach((el) => observer.observe(el));
-    }, 35);
-
-    return () => {
-      window.clearTimeout(timer);
-      observer.disconnect();
-    };
   }, [location.pathname]);
 
-  const mobileTabs = [
-    { path: '/topup', label: 'Top Up', icon: <Gem className="w-4 h-4" /> },
-    { path: '/offers', label: 'Offers', icon: <Sparkles className="w-4 h-4" /> },
-    { path: '/tournaments', label: 'Esports', icon: <Trophy className="w-4 h-4" /> },
-    { path: '/income', label: 'Income', icon: <Coins className="w-4 h-4" /> },
-    { path: '/wallet', label: 'Wallet', icon: <Wallet className="w-4 h-4" /> },
-  ];
-
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-[#060A12] text-[#0F172A] dark:text-[#F8FAFC] transition-colors">
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA] dark:bg-[#0B0F17] text-[#111827] dark:text-[#F9FAFB] transition-colors">
       <Navbar />
       <PageSeoAndBreadcrumbs />
       <ToastContainer />
       <CartDrawer />
-      <main key={location.pathname} className="flex-1 pb-20 lg:pb-0 page-enter">
+      <main key={location.pathname} className="flex-1 page-enter">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -117,26 +79,6 @@ const AppRoutesShell: React.FC = () => {
       </main>
       <SupportChatWidget />
       <Footer />
-
-      {/* Mobile Sticky Bottom Quick-Action Dock */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-[#09101F]/95 backdrop-blur-xl border-t border-[#E2E8F0] dark:border-[#1E2D4A] px-2 py-1.5 grid grid-cols-5 gap-1 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
-        {mobileTabs.map((tab) => (
-          <NavLink
-            key={tab.path}
-            to={tab.path}
-            className={({ isActive }) =>
-              `min-h-[46px] rounded-xl flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-all ${
-                isActive
-                  ? 'bg-[#2563EB] text-white shadow-sm'
-                  : 'text-[#475569] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white'
-              }`
-            }
-          >
-            {tab.icon}
-            <span className="leading-none">{tab.label}</span>
-          </NavLink>
-        ))}
-      </div>
     </div>
   );
 };
@@ -152,4 +94,3 @@ export function App() {
 }
 
 export default App;
-

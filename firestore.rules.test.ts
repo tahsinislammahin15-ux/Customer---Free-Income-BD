@@ -56,7 +56,7 @@ export const DIRTY_DOZEN_TEST_CASES: DirtyDozenTestCase[] = [
     collectionPath: 'settings/public',
     operation: 'create',
     auth: { uid: 'admin1', email: 'tahsinislammahin15@gmail.com', email_verified: true },
-    payload: { siteName: 'Free Income BD', ghostAdminField: true },
+    payload: { siteName: 'H41FFTOPUP', ghostAdminField: true },
     expectedResult: 'PERMISSION_DENIED',
   },
   {

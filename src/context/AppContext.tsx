@@ -238,8 +238,29 @@ interface AppContextType {
   adminUpdateSiteSettings: (settings: SiteSettings) => Promise<boolean>;
 }
 
-const STORAGE_KEY = 'fibd_app_state_v1';
-const ADMIN_SESSION_STORAGE_KEY = 'fibd_admin_session_v2';
+const STORAGE_KEY = 'h41fftopup_app_state_v2';
+const ADMIN_SESSION_STORAGE_KEY = 'h41fftopup_admin_session_v2';
+
+function normalizeBrandName(name?: string): string {
+  if (!name || /free\s*income\s*bd|fibd/i.test(name)) {
+    return 'H41FFTOPUP';
+  }
+  return name;
+}
+
+function normalizeSupportEmail(email?: string): string {
+  if (!email || /freeincomebd/i.test(email)) {
+    return 'support@h41fftopup.com';
+  }
+  return email;
+}
+
+function normalizeSupportTelegram(handle?: string): string {
+  if (!handle || /freeincomebd/i.test(handle)) {
+    return '@h41fftopup';
+  }
+  return handle;
+}
 
 const defaultAdminSession: AdminSessionState = {
   authenticated: false,
@@ -277,10 +298,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const currentPage: PageView = resolvePageFromPath(location.pathname);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => {
     const loaded = loadState('siteSettings', initialSiteSettings);
+    const cleanedUrl = sanitizeSafeUrl(loaded.siteUrl);
     return {
       ...initialSiteSettings,
       ...loaded,
-      siteUrl: sanitizeSafeUrl(loaded.siteUrl) || initialSiteSettings.siteUrl,
+      siteName: normalizeBrandName(loaded.siteName),
+      supportEmail: normalizeSupportEmail(loaded.supportEmail),
+      supportTelegram: normalizeSupportTelegram(loaded.supportTelegram),
+      siteUrl:
+        cleanedUrl && !/freeincomebd/i.test(cleanedUrl)
+          ? cleanedUrl
+          : initialSiteSettings.siteUrl,
       mapEmbedUrl: sanitizeSafeUrl(loaded.mapEmbedUrl) || initialSiteSettings.mapEmbedUrl,
       facebookUrl: sanitizeSafeUrl(loaded.facebookUrl) || initialSiteSettings.facebookUrl,
       telegramUrl: sanitizeSafeUrl(loaded.telegramUrl) || initialSiteSettings.telegramUrl,
@@ -446,22 +474,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
+          const cleanedRemoteUrl = sanitizeSafeUrl(data.siteUrl);
           setSiteSettings((prev) => ({
             ...prev,
-            siteName: typeof data.siteName === 'string' ? data.siteName : prev.siteName,
+            siteName:
+              typeof data.siteName === 'string'
+                ? normalizeBrandName(data.siteName)
+                : prev.siteName,
             tagline: typeof data.tagline === 'string' ? data.tagline : prev.tagline,
             logoUrl: typeof data.logoUrl === 'string' ? data.logoUrl : prev.logoUrl,
-            siteUrl: sanitizeSafeUrl(data.siteUrl) || prev.siteUrl,
+            siteUrl:
+              cleanedRemoteUrl && !/freeincomebd/i.test(cleanedRemoteUrl)
+                ? cleanedRemoteUrl
+                : prev.siteUrl,
             mapEmbedUrl: sanitizeSafeUrl(data.mapEmbedUrl) || prev.mapEmbedUrl,
             facebookUrl: sanitizeSafeUrl(data.facebookUrl) || prev.facebookUrl,
             telegramUrl: sanitizeSafeUrl(data.telegramUrl) || prev.telegramUrl,
             whatsappUrl: sanitizeSafeUrl(data.whatsappUrl) || prev.whatsappUrl,
-            supportEmail: typeof data.supportEmail === 'string' ? data.supportEmail : prev.supportEmail,
+            supportEmail:
+              typeof data.supportEmail === 'string'
+                ? normalizeSupportEmail(data.supportEmail)
+                : prev.supportEmail,
             supportPhone: typeof data.supportPhone === 'string' ? data.supportPhone : prev.supportPhone,
             supportWhatsapp:
               typeof data.supportWhatsapp === 'string' ? data.supportWhatsapp : prev.supportWhatsapp,
             supportTelegram:
-              typeof data.supportTelegram === 'string' ? data.supportTelegram : prev.supportTelegram,
+              typeof data.supportTelegram === 'string'
+                ? normalizeSupportTelegram(data.supportTelegram)
+                : prev.supportTelegram,
             officeAddress:
               typeof data.officeAddress === 'string' ? data.officeAddress : prev.officeAddress,
             announcementText:
@@ -1048,7 +1088,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (matched.banned) {
       addToast(
         'Account Suspended',
-        'Your account has been restricted by moderation. Contact support@freeincomebd.com.',
+        'Your account has been restricted by moderation. Contact support@h41fftopup.com.',
         'error'
       );
       return;

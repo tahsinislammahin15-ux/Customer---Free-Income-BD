@@ -143,11 +143,11 @@ function loadSecretsStore(): EncryptedSecretsStore {
   const initialStore: EncryptedSecretsStore = {
     paymentGatewayApiKey: encryptSecret(
       process.env.PAYMENT_GATEWAY_API_KEY ||
-        `FIBD-GW-${crypto.randomBytes(12).toString('hex').toUpperCase()}`
+        `H41FFTOPUP-GW-${crypto.randomBytes(12).toString('hex').toUpperCase()}`
     ),
     unipinVoucherApiSecret: encryptSecret(
       process.env.UNIPIN_VOUCHER_API_SECRET ||
-        `FIBD-UP-${crypto.randomBytes(12).toString('hex').toUpperCase()}`
+        `H41FFTOPUP-UP-${crypto.randomBytes(12).toString('hex').toUpperCase()}`
     ),
   };
   fs.writeFileSync(SECRETS_FILE, JSON.stringify(initialStore, null, 2), { mode: 0o600 });
@@ -766,7 +766,7 @@ function createInitialWalletStore(): WalletLedgerStore {
           merchantNumber: '01700-000001',
           personalNumber: '01700-000002',
           instructions:
-            'Dial *247# or use bKash App -> Send Money / Make Payment -> Enter Reference FIBD.',
+            'Dial *247# or use bKash App -> Send Money / Make Payment -> Enter Reference H41FFTOPUP.',
           color: '#E2136E',
         },
         {
@@ -2758,7 +2758,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Free Income BD production server listening on http://0.0.0.0:${PORT}`);
+    console.log(`H41FFTOPUP production server listening on http://0.0.0.0:${PORT}`);
   });
 }
 

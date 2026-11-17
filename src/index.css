@@ -4,41 +4,50 @@
 
 @layer base {
   :root {
+    /* =========================================================================
+       H41FFTOPUP EXACT DESIGN TOKENS (REPLICATED FROM ZVYTOPUP RECORDING)
+       ========================================================================= */
     --font-display: 'Outfit', 'Hind Siliguri', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-sans: 'Plus Jakarta Sans', 'Hind Siliguri', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
-    /* Refined Exact Hex Palette — Light Mode (Crisp Fintech Daylight) */
-    --color-primary: #2563EB;
-    --color-primary-hover: #1D4ED8;
-    --color-secondary: #10B981;
-    --color-accent: #F59E0B;
-    --bg-canvas: #F8FAFC;
+    /* Core Brand & Surface Tokens */
+    --zvy-maroon-header: #280606;
+    --zvy-maroon-footer: #230505;
+    --zvy-maroon-btn: #3B0A0A;
+    --zvy-maroon-pill: #3D1414;
+    --zvy-maroon-border: #5C2222;
+    --zvy-notice-bg: #141414;
+    --zvy-navy-cta: #0D3B66;
+    --zvy-navy-cta-hover: #092B4C;
+    --zvy-telegram-card: #15192B;
+    --zvy-telegram-border: #252D4B;
+    --zvy-complete-green: #00C853;
+    --zvy-flame-orange: #FF5500;
+    --zvy-gold: #F59E0B;
+
+    /* Page & Card Tokens (Light Default as in Reference Recording) */
+    --bg-canvas: #FAFAFA;
     --bg-surface: #FFFFFF;
-    --bg-elevated: #F1F5F9;
-    --border-hairline: #E2E8F0;
-    --border-strong: #CBD5E1;
-    --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #64748B;
-    --brand-glow: rgba(37, 99, 235, 0.14);
+    --bg-elevated: #F8FAFC;
+    --border-hairline: #E5E7EB;
+    --border-strong: #D1D5DB;
+    --text-primary: #111827;
+    --text-secondary: #4B5563;
+    --text-muted: #6B7280;
+    --brand-glow: rgba(255, 85, 0, 0.16);
   }
 
   .dark {
-    /* Refined Exact Hex Palette — Dark Mode (Obsidian Esports Studio) */
-    --color-primary: #3B82F6;
-    --color-primary-hover: #2563EB;
-    --color-secondary: #34D399;
-    --color-accent: #FBBF24;
-    --bg-canvas: #060A12;
-    --bg-surface: #0D1526;
-    --bg-elevated: #111C33;
-    --border-hairline: #1E2D4A;
-    --border-strong: #2E436E;
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-muted: #64748B;
-    --brand-glow: rgba(59, 130, 246, 0.22);
+    --bg-canvas: #0B0F17;
+    --bg-surface: #111827;
+    --bg-elevated: #1A2333;
+    --border-hairline: #1F2937;
+    --border-strong: #374151;
+    --text-primary: #F9FAFB;
+    --text-secondary: #9CA3AF;
+    --text-muted: #6B7280;
+    --brand-glow: rgba(255, 107, 0, 0.24);
   }
 
   html {
@@ -54,19 +63,7 @@
     min-width: 320px;
     background-color: var(--bg-canvas);
     color: var(--text-primary);
-    line-height: 1.65;
-    letter-spacing: -0.005em;
-    background-image:
-      radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.065), transparent 40%),
-      radial-gradient(circle at 88% 8%, rgba(16, 185, 129, 0.05), transparent 36%);
-  }
-
-  .dark body {
-    letter-spacing: 0.002em;
-    background-image:
-      radial-gradient(circle at 14% 0%, rgba(37, 99, 235, 0.15), transparent 44%),
-      radial-gradient(circle at 86% 10%, rgba(16, 185, 129, 0.09), transparent 38%),
-      radial-gradient(circle at 50% 100%, rgba(245, 158, 11, 0.05), transparent 45%);
+    line-height: 1.5;
   }
 
   h1,
@@ -75,38 +72,29 @@
   h4,
   .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.025em;
-    line-height: 1.16;
-    text-wrap: balance;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
   }
 
-  p,
-  li {
-    text-wrap: pretty;
-  }
-
-  /* Accessible Keyboard Focus Ring */
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid #FF5500;
     outline-offset: 2px;
   }
 
-  /* Form Input Polish */
   input:not([type="range"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]),
   select,
   textarea {
     transition:
-      border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
-      background-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+      border-color 150ms ease,
+      box-shadow 150ms ease;
   }
 
   input:not([type="range"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]):focus,
   select:focus,
   textarea:focus {
     outline: none;
-    border-color: var(--color-primary) !important;
-    box-shadow: 0 0 0 3px var(--brand-glow);
+    border-color: #3B0A0A !important;
+    box-shadow: 0 0 0 3px rgba(59, 10, 10, 0.12);
   }
 }
 
@@ -116,176 +104,201 @@
 }
 
 /* ============================================================================
-   UNIFIED ARCHITECTURAL SURFACES & ELEVATED CARDS
+   REUSABLE REFERENCE COMPONENTS & SURFACES
    ============================================================================ */
 .card-premium,
-.surface-card {
-  background: linear-gradient(180deg, #FFFFFF 0%, #FCFDFE 100%);
+.surface-card,
+.zvy-card {
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-hairline);
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.03),
-    0 10px 28px -10px rgba(15, 23, 42, 0.06);
+  border-radius: 1rem;
+  box-shadow: 0 1px 4px rgba(17, 24, 39, 0.04);
   transition:
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 150ms ease,
+    border-color 150ms ease;
 }
 
 .dark .card-premium,
-.dark .surface-card {
-  background: linear-gradient(180deg, rgba(16, 26, 48, 0.94) 0%, rgba(11, 18, 34, 0.97) 100%);
-  border: 1px solid rgba(30, 45, 74, 0.92);
-  box-shadow:
-    0 16px 38px -14px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+.dark .surface-card,
+.dark .zvy-card {
+  background-color: #111827;
+  border-color: #1F2937;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 
-.card-premium-interactive,
-.surface-card-hover {
-  will-change: transform;
+/* 3-Column Square Game Card (Matches 00:32 - 00:35 in Recording) */
+.zvy-square-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .card-premium-interactive:hover,
-  .surface-card-hover:hover {
-    transform: translateY(-3px);
-    border-color: rgba(37, 99, 235, 0.5);
-    box-shadow:
-      0 18px 36px -12px rgba(37, 99, 235, 0.14),
-      0 4px 12px -2px rgba(15, 23, 42, 0.06);
-  }
-
-  .dark .card-premium-interactive:hover,
-  .dark .surface-card-hover:hover {
-    border-color: rgba(59, 130, 246, 0.55);
-    box-shadow:
-      0 22px 44px -14px rgba(0, 0, 0, 0.8),
-      0 0 24px -6px rgba(59, 130, 246, 0.25),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
-  }
+.zvy-square-tile:hover {
+  transform: translateY(-2px);
 }
 
-/* ============================================================================
-   BRAND TYPOGRAPHY & AMBIENT GLOW UTILITIES
-   ============================================================================ */
-.text-gradient-brand {
-  background: linear-gradient(135deg, #2563EB 0%, #0EA5E9 52%, #10B981 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.zvy-square-tile:active {
+  transform: scale(0.98);
 }
 
-.dark .text-gradient-brand {
-  background: linear-gradient(135deg, #60A5FA 0%, #38BDF8 50%, #34D399 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.ambient-glow {
+/* Recharge Denomination Radio Tile (Matches 02:04 & 02:13 in Recording) */
+.zvy-recharge-item {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid #E5E7EB;
+  background-color: #FFFFFF;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
-/* ============================================================================
-   TACTILE BUTTONS (FAST <= 180MS FEEDBACK)
-   ============================================================================ */
-.btn-primary {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+.dark .zvy-recharge-item {
+  background-color: #161F30;
+  border-color: #26334D;
+}
+
+.zvy-recharge-item:hover {
+  border-color: #3B0A0A;
+}
+
+.zvy-recharge-item-selected {
+  border: 1.5px solid #3B0A0A !important;
+  background-color: #FFF9F5 !important;
+  box-shadow: 0 2px 8px rgba(59, 10, 10, 0.08) !important;
+}
+
+.dark .zvy-recharge-item-selected {
+  border-color: #FF5500 !important;
+  background-color: rgba(255, 85, 0, 0.12) !important;
+}
+
+/* Legacy compatibility classes for other pages */
+.package-tile {
+  position: relative;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-hairline);
+  background-color: var(--bg-surface);
+  transition: all 140ms ease;
+  cursor: pointer;
+}
+
+.package-tile:hover {
+  border-color: #FF5500;
+}
+
+.package-tile-selected {
+  border: 1.5px solid #FF5500 !important;
+  background-color: rgba(255, 85, 0, 0.06) !important;
+}
+
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background-color: #280606;
   color: #FFFFFF;
-  box-shadow:
-    0 6px 18px -4px rgba(37, 99, 235, 0.42),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.dark .step-badge {
+  background-color: #FF5500;
+}
+
+/* Reference Brand Gradient Text */
+.text-gradient-brand {
+  background: linear-gradient(180deg, #FF7A00 0%, #E02400 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-leaderboard {
+  background: linear-gradient(90deg, #FF5500 0%, #D97706 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: #3B0A0A;
+  color: #FFFFFF;
   transition:
-    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 150ms ease;
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .btn-primary:hover {
-  filter: brightness(1.07);
-  box-shadow:
-    0 10px 24px -4px rgba(37, 99, 235, 0.54),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.28);
+  background-color: #521010;
 }
 
 .btn-primary:active {
-  transform: translateY(1px) scale(0.99);
+  transform: scale(0.99);
+}
+
+.btn-navy-buy {
+  background-color: #0D3B66;
+  color: #FFFFFF;
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.btn-navy-buy:hover {
+  background-color: #092B4C;
+}
+
+.btn-navy-buy:active {
+  transform: scale(0.99);
 }
 
 .btn-emerald {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  background-color: #00C853;
   color: #FFFFFF;
-  box-shadow:
-    0 6px 18px -4px rgba(16, 185, 129, 0.38),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
-  transition:
-    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 150ms ease;
+  transition: filter 140ms ease;
 }
 
 .btn-emerald:hover {
-  filter: brightness(1.07);
-  box-shadow: 0 10px 24px -4px rgba(16, 185, 129, 0.5);
-}
-
-.btn-emerald:active {
-  transform: translateY(1px) scale(0.99);
+  filter: brightness(1.05);
 }
 
 .btn-amber {
-  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-  color: #060A12;
-  box-shadow:
-    0 6px 18px -4px rgba(245, 158, 11, 0.38),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.28);
-  transition:
-    transform 150ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 150ms ease;
-}
-
-.btn-amber:hover {
-  filter: brightness(1.06);
-}
-
-.btn-amber:active {
-  transform: translateY(1px) scale(0.99);
+  background-color: #F59E0B;
+  color: #111827;
 }
 
 .btn-secondary {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-hairline);
   color: var(--text-primary);
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease,
-    transform 150ms ease;
+  transition: border-color 140ms ease;
 }
 
 .btn-secondary:hover {
-  border-color: var(--color-primary);
-  background-color: rgba(37, 99, 235, 0.05);
+  border-color: #3B0A0A;
 }
 
-.dark .btn-secondary {
-  background-color: rgba(17, 28, 51, 0.9);
-  border-color: var(--border-hairline);
-}
-
-.dark .btn-secondary:hover {
-  border-color: #3B82F6;
-  background-color: rgba(59, 130, 246, 0.12);
-}
-
-/* ============================================================================
-   SUBTLE SCROLL-REVEAL & PAGE TRANSITION EFFECTS (REDUCED-MOTION SAFE)
-   ============================================================================ */
 @keyframes pageFadeRise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -294,59 +307,14 @@
 }
 
 .page-enter {
-  animation: pageFadeRise 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: pageFadeRise 180ms ease forwards;
 }
 
 .reveal-on-scroll {
-  opacity: 0;
-  transform: translateY(16px);
-  transition:
-    opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-}
-
-.reveal-on-scroll.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
 
-.reveal-delay-1 {
-  transition-delay: 60ms;
-}
-
-.reveal-delay-2 {
-  transition-delay: 120ms;
-}
-
-.reveal-delay-3 {
-  transition-delay: 180ms;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  .page-enter {
-    animation: none !important;
-  }
-  .reveal-on-scroll {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-  }
-  .card-premium-interactive,
-  .surface-card-hover,
-  .btn-primary,
-  .btn-emerald,
-  .btn-amber,
-  .btn-secondary {
-    transition: none !important;
-    transform: none !important;
-  }
-}
-
-/* Hide scrollbars on horizontal filter bars while preserving scroll */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

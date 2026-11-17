@@ -20,10 +20,10 @@ function resolvePublicUrl(envKey: string, fallback: string): string {
 }
 
 export const PUBLIC_ENV = {
-  SITE_URL: resolvePublicUrl('VITE_PUBLIC_SITE_URL', 'https://freeincomebd.com'),
+  SITE_URL: resolvePublicUrl('VITE_PUBLIC_SITE_URL', 'https://h41fftopup.com'),
   PROOF_FALLBACK_URL: resolvePublicUrl(
     'VITE_PUBLIC_SITE_URL',
-    'https://freeincomebd.com/proof-submitted'
+    'https://h41fftopup.com/proof-submitted'
   ),
   MAP_EMBED_URL: resolvePublicUrl(
     'VITE_MAP_EMBED_URL',

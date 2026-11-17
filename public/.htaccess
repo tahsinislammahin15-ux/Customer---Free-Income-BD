@@ -1,5 +1,5 @@
 # ==============================================================================
-# FREE INCOME BD — APACHE / cPANEL (.htaccess) CONFIGURATION
+# H41FFTOPUP — APACHE / cPANEL (.htaccess) CONFIGURATION
 # Placed in `public/.htaccess` so Vite automatically copies it to `dist/.htaccess`
 # Ready for cPanel `public_html` shared hosting (Apache 2.4+ / LiteSpeed)
 # ==============================================================================

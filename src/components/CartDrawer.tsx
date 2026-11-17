@@ -42,8 +42,8 @@ export const CartDrawer: React.FC = () => {
         {/* Header */}
         <div className="px-6 py-4 border-b border-[#E2E8F0] dark:border-[#1E2D4A] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <ShoppingBag className="w-5 h-5 text-[#2563EB] dark:text-[#60A5FA]" />
-            <h2 className="font-display text-base font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+            <ShoppingBag className="w-5 h-5 text-[#3B0A0A] dark:text-[#FCA5A5]" />
+            <h2 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
               Top Up Cart ({cart.length})
             </h2>
           </div>
@@ -106,7 +106,7 @@ export const CartDrawer: React.FC = () => {
                     <button
                       onClick={() => updateCartQty(item.pkg.id, -1)}
                       aria-label="Decrease quantity"
-                      className="min-h-[32px] min-w-[32px] p-1 rounded-lg border border-[#E2E8F0] dark:border-[#1E2D4A] hover:border-[#2563EB] flex items-center justify-center"
+                      className="min-h-[32px] min-w-[32px] p-1 rounded-lg border border-[#E2E8F0] dark:border-[#1E2D4A] hover:border-[#3B0A0A] flex items-center justify-center"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </button>
@@ -116,12 +116,12 @@ export const CartDrawer: React.FC = () => {
                     <button
                       onClick={() => updateCartQty(item.pkg.id, 1)}
                       aria-label="Increase quantity"
-                      className="min-h-[32px] min-w-[32px] p-1 rounded-lg border border-[#E2E8F0] dark:border-[#1E2D4A] hover:border-[#2563EB] flex items-center justify-center"
+                      className="min-h-[32px] min-w-[32px] p-1 rounded-lg border border-[#E2E8F0] dark:border-[#1E2D4A] hover:border-[#3B0A0A] flex items-center justify-center"
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <span className="text-sm font-mono font-bold text-[#2563EB] dark:text-[#60A5FA]">
+                  <span className="text-sm font-mono font-bold text-[#3B0A0A] dark:text-[#FCA5A5]">
                     ৳{item.pkg.priceBdt * item.quantity}
                   </span>
                 </div>
@@ -141,14 +141,14 @@ export const CartDrawer: React.FC = () => {
                 <span>Total Diamonds</span>
                 <span className="font-mono font-semibold">{totalDiamonds} 💎</span>
               </div>
-              <div className="flex justify-between text-sm font-bold text-[#0F172A] dark:text-[#F8FAFC]">
+              <div className="flex justify-between text-sm font-bold text-[#111827] dark:text-[#F8FAFC]">
                 <span>Total Payable</span>
-                <span className="font-mono text-[#2563EB] dark:text-[#60A5FA]">৳{totalBdt} BDT</span>
+                <span className="font-mono text-[#3B0A0A] dark:text-[#FCA5A5]">৳{totalBdt} BDT</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-semibold text-[#0F172A] dark:text-[#F8FAFC]">
+              <label className="block text-xs font-semibold text-[#111827] dark:text-[#F8FAFC]">
                 Select Payment Method
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -157,8 +157,8 @@ export const CartDrawer: React.FC = () => {
                   onClick={() => setPaymentMethod('wallet')}
                   className={`min-h-[48px] px-3 py-2 rounded-xl text-xs font-semibold border text-left transition-colors ${
                     paymentMethod === 'wallet'
-                      ? 'border-[#2563EB] bg-[#EFF6FF] dark:bg-[#111C33] text-[#2563EB] dark:text-white'
-                      : 'border-[#E2E8F0] dark:border-[#1E2D4A] text-[#475569] dark:text-[#94A3B8]'
+                      ? 'border-2 border-[#3B0A0A] bg-[#FFF5F5] dark:bg-[#2A0B0B] text-[#3B0A0A] dark:text-white'
+                      : 'border-[#E5E7EB] dark:border-[#1E2D4A] text-[#4B5563] dark:text-[#94A3B8]'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
@@ -177,8 +177,8 @@ export const CartDrawer: React.FC = () => {
                     onClick={() => setPaymentMethod(gw.id)}
                     className={`min-h-[48px] px-3 py-2 rounded-xl text-xs font-semibold border text-left transition-colors ${
                       paymentMethod === gw.id
-                        ? 'border-[#2563EB] bg-[#EFF6FF] dark:bg-[#111C33] text-[#2563EB] dark:text-white'
-                        : 'border-[#E2E8F0] dark:border-[#1E2D4A] text-[#475569] dark:text-[#94A3B8]'
+                        ? 'border-2 border-[#3B0A0A] bg-[#FFF5F5] dark:bg-[#2A0B0B] text-[#3B0A0A] dark:text-white'
+                        : 'border-[#E5E7EB] dark:border-[#1E2D4A] text-[#4B5563] dark:text-[#94A3B8]'
                     }`}
                   >
                     <div>{gw.name}</div>
@@ -206,7 +206,7 @@ export const CartDrawer: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full min-h-[46px] py-3 px-4 rounded-xl btn-primary text-sm font-semibold flex items-center justify-center gap-2"
+              className="w-full min-h-[46px] py-3 px-4 rounded-xl btn-navy-buy text-sm font-semibold flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>
