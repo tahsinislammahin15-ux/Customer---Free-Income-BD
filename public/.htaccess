@@ -29,6 +29,10 @@ DirectoryIndex index.html
   # Block direct web access to hidden dotfiles (e.g. .cpanel.yml, .git, .env)
   RewriteRule (^\.|/\.) - [F]
 
+  # Do not rewrite missing /api/* routes to index.html on static hosting
+  RewriteCond %{REQUEST_URI} ^/api/ [NC]
+  RewriteRule ^ - [R=404,L]
+
   # Allow existing files and directories (JS, CSS, images, fonts) to be served directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d

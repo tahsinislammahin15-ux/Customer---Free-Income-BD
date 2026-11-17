@@ -82,11 +82,13 @@ export const AdminPanelPage: React.FC = () => {
     taskSubmissions,
     deposits,
     withdrawals,
+    transactions,
     paymentSettings,
     blogPosts,
     contactMessages,
     auditLogs,
     siteSettings,
+    backendApiAvailable,
     adminSession,
     maskedSecrets,
     adminBootstrap,
@@ -152,34 +154,51 @@ export const AdminPanelPage: React.FC = () => {
     setInspectUser(userObj);
     setInspectLoading(true);
     try {
-      const headers: Record<string, string> = {};
-      if (adminSession.sessionToken) {
-        headers.Authorization = `Bearer ${adminSession.sessionToken}`;
-        headers['X-Admin-Token'] = adminSession.sessionToken;
-      } else if (auth.currentUser) {
-        const idToken = await auth.currentUser.getIdToken();
-        headers.Authorization = `Bearer ${idToken}`;
-      }
-      const res = await fetch(`/api/wallet/user/${encodeURIComponent(userObj.id)}`, {
-        headers,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.ok) {
-          setInspectBalances(data.balances || null);
-          setInspectLedger(
-            Array.isArray(data.userLedger)
-              ? data.userLedger
-              : Array.isArray(data.ledger)
-              ? data.ledger
-              : []
-          );
+      if (backendApiAvailable !== false && !adminSession.sessionToken.startsWith('firebase:')) {
+        const headers: Record<string, string> = {};
+        if (adminSession.sessionToken) {
+          headers.Authorization = `Bearer ${adminSession.sessionToken}`;
+          headers['X-Admin-Token'] = adminSession.sessionToken;
+        } else if (auth.currentUser) {
+          const idToken = await auth.currentUser.getIdToken();
+          headers.Authorization = `Bearer ${idToken}`;
         }
-      } else {
-        addToast('Ledger Fetch Failed', 'Unable to authorize user wallet lookup.', 'error');
+        const res = await fetch(`/api/wallet/user/${encodeURIComponent(userObj.id)}`, {
+          headers,
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.toLowerCase().includes('application/json')) {
+          const data = await res.json();
+          if (data?.ok) {
+            setInspectBalances(data.balances || null);
+            setInspectLedger(
+              Array.isArray(data.userLedger)
+                ? data.userLedger
+                : Array.isArray(data.ledger)
+                ? data.ledger
+                : []
+            );
+            setInspectLoading(false);
+            return;
+          }
+        }
       }
+      // Static Cloud Hosting fallback (or if backend absent) -> derive from Firestore state
+      setInspectBalances({
+        mainBalance: userObj.mainBalance || 0,
+        incomeBalance: userObj.incomeBalance || 0,
+        bonusBalance: userObj.bonusBalance || 0,
+        lockedPendingBdt: lockedPendingByUser[userObj.id] || 0,
+      });
+      setInspectLedger(transactions.filter((tItem) => tItem.userId === userObj.id));
     } catch {
-      addToast('Network Error', 'Failed to inspect user ledger.', 'error');
+      setInspectBalances({
+        mainBalance: userObj.mainBalance || 0,
+        incomeBalance: userObj.incomeBalance || 0,
+        bonusBalance: userObj.bonusBalance || 0,
+        lockedPendingBdt: lockedPendingByUser[userObj.id] || 0,
+      });
+      setInspectLedger(transactions.filter((tItem) => tItem.userId === userObj.id));
     }
     setInspectLoading(false);
   };
@@ -354,9 +373,19 @@ export const AdminPanelPage: React.FC = () => {
           </div>
 
           {authError && (
-            <div className="p-3.5 rounded-xl bg-[#FEE2E2] border border-[#FECACA] text-xs text-[#B91C1C] flex items-start gap-2">
+            <div className="p-3.5 rounded-xl bg-[#FEE2E2] dark:bg-red-950/60 border border-[#FECACA] dark:border-red-900 text-xs text-[#B91C1C] dark:text-red-300 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{authError}</span>
+            </div>
+          )}
+
+          {backendApiAvailable === false && (
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+              <div className="font-bold">Firebase Cloud Static Mode Active</div>
+              <p className="text-[11px] leading-relaxed">
+                This deployment is served as a static build without a Node API server. Sign in directly with{' '}
+                <span className="font-semibold">Google (Authorized Principal Admin)</span> or your verified Firebase Admin email & password below.
+              </p>
             </div>
           )}
 
@@ -408,10 +437,36 @@ export const AdminPanelPage: React.FC = () => {
 
           {authMode === 'login' && (
             <div className="space-y-5">
+              <button
+                type="button"
+                onClick={async () => {
+                  setAuthError('');
+                  setAuthSubmitting(true);
+                  const res = await adminGoogleLogin();
+                  setAuthSubmitting(false);
+                  if (!res.ok && res.error) {
+                    setAuthError(res.error);
+                  }
+                }}
+                disabled={authSubmitting}
+                className="w-full py-3 px-4 rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+              >
+                <ShieldCheck className="w-4 h-4 text-white" />
+                <span>Sign In with Google (Authorized Principal Admin)</span>
+              </button>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-[#E2E8F0] dark:border-[#1E293B]" />
+                <span className="shrink mx-3 text-[11px] font-mono uppercase text-[#475569] dark:text-[#94A3B8]">
+                  OR ADMIN PASSWORD LOGIN
+                </span>
+                <div className="flex-grow border-t border-[#E2E8F0] dark:border-[#1E293B]" />
+              </div>
+
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Admin Email or Username
+                  <label className="block text-xs font-semibold mb-1 text-[#111827] dark:text-[#F8FAFC]">
+                    Admin Email {backendApiAvailable !== false ? 'or Username' : ''}
                   </label>
                   <input
                     type="text"
@@ -420,13 +475,13 @@ export const AdminPanelPage: React.FC = () => {
                     autoComplete="username"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
-                    placeholder="admin@example.com or admin_username"
+                    placeholder="tahsinislammahin15@gmail.com"
                     className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-[#111827] dark:text-white placeholder:text-gray-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Admin Password (Hashed via Server scrypt)
+                  <label className="block text-xs font-semibold mb-1 text-[#111827] dark:text-[#F8FAFC]">
+                    Admin Password
                   </label>
                   <input
                     type="password"
@@ -449,65 +504,55 @@ export const AdminPanelPage: React.FC = () => {
                 </button>
               </form>
 
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-[#E2E8F0] dark:border-[#1E293B]" />
-                <span className="shrink mx-3 text-[11px] font-mono uppercase text-[#475569] dark:text-[#94A3B8]">
-                  OR FIREBASE VERIFIED OWNER AUTH
-                </span>
-                <div className="flex-grow border-t border-[#E2E8F0] dark:border-[#1E293B]" />
-              </div>
-
-              <button
-                type="button"
-                onClick={adminGoogleLogin}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#0D3B66] hover:bg-[#092B4C] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
-              >
-                <ShieldCheck className="w-4 h-4 text-white" />
-                <span>Sign In with Google (Authorized Principal Admin)</span>
-              </button>
-
               <div className="p-3.5 rounded-xl bg-[#FAFAFA] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] text-[11px] text-[#4B5563] dark:text-[#94A3B8] space-y-1">
                 <div className="font-bold text-[#111827] dark:text-[#F8FAFC]">
                   Production Security Enforcement Active:
                 </div>
-                <div>• Rate Limited: Max 5 login attempts per 15-minute window</div>
-                <div>• Session Expiry: 30-minute HMAC-SHA256 token with server revocation</div>
-                <div>• First-Time Setup: Use the "1st-Time Setup" tab if no admin password is set yet</div>
+                <div>• Firebase RBAC & Firestore Rules enforce Principal Admin ownership</div>
+                <div>• Session Expiry: 30-minute security window with instant Sign Out</div>
+                <div>• First-Time Setup: Use Google Sign-In or "1st-Time Setup" for initial password</div>
               </div>
             </div>
           )}
 
           {authMode === 'bootstrap' && (
             <form onSubmit={handleBootstrapSubmit} className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-[#FFF5F5] border border-[#FECACA] text-xs text-[#3B0A0A] space-y-1">
+              <div className="p-3.5 rounded-xl bg-[#FFF5F5] dark:bg-[#1F0E12] border border-[#FECACA] dark:border-red-900/60 text-xs text-[#3B0A0A] dark:text-red-200 space-y-1">
                 <div className="font-bold">Step 1 of Client Handover: Create Admin Account</div>
                 <p className="text-[11px] leading-relaxed">
-                  Provisions the initial administrator record on the server using scrypt + auto-generated server salt. Upon first login, the system will force an immediate password change.
+                  {backendApiAvailable === false
+                    ? 'Creates an Email/Password login in Firebase Authentication for the Principal Admin email (email verification required), or use "Sign In with Google" on the Admin Sign In tab for instant access.'
+                    : 'Provisions the initial administrator record on the server using scrypt + auto-generated server salt. Upon first login, the system will force an immediate password change.'}
                 </p>
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">Admin Email</label>
+                <label className="block text-xs font-semibold mb-1 text-[#111827] dark:text-[#F8FAFC]">
+                  Admin Email
+                </label>
                 <input
                   type="email"
                   required
                   value={bootEmail}
                   onChange={(e) => setBootEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                  placeholder="tahsinislammahin15@gmail.com"
+                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-[#111827] dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">Admin Username</label>
+                <label className="block text-xs font-semibold mb-1 text-[#111827] dark:text-[#F8FAFC]">
+                  Admin Username
+                </label>
                 <input
                   type="text"
                   required
                   minLength={3}
                   value={bootUsername}
                   onChange={(e) => setBootUsername(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-[#111827] dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">
+                <label className="block text-xs font-semibold mb-1 text-[#111827] dark:text-[#F8FAFC]">
                   Initial Temporary Password (Min 10 characters)
                 </label>
                 <input
@@ -517,13 +562,13 @@ export const AdminPanelPage: React.FC = () => {
                   value={bootPassword}
                   onChange={(e) => setBootPassword(e.target.value)}
                   placeholder="Enter strong initial password (min 10 chars)"
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-[#111827] dark:text-white"
                 />
               </div>
               <button
                 type="submit"
                 disabled={authSubmitting}
-                className="w-full py-3 rounded-xl btn-primary text-xs font-bold"
+                className="w-full py-3 rounded-xl btn-primary text-xs font-bold disabled:opacity-60"
               >
                 {authSubmitting ? 'Provisioning Admin...' : 'Initialize Admin Account'}
               </button>
@@ -536,19 +581,22 @@ export const AdminPanelPage: React.FC = () => {
                 Enter your administrator email address. If it matches the configured principal admin account, a Firebase password reset link and server recovery audit event will be dispatched.
               </p>
               <div>
-                <label className="block text-xs font-semibold mb-1">Administrator Email</label>
+                <label className="block text-xs font-semibold mb-1 text-[#111827] dark:text-[#F8FAFC]">
+                  Administrator Email
+                </label>
                 <input
                   type="email"
                   required
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B]"
+                  placeholder="tahsinislammahin15@gmail.com"
+                  className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-[#F8FAFC] dark:bg-[#0B1120] border border-[#E2E8F0] dark:border-[#1E293B] text-[#111827] dark:text-white"
                 />
               </div>
               <button
                 type="submit"
                 disabled={authSubmitting}
-                className="w-full py-3 rounded-xl btn-primary text-xs font-bold"
+                className="w-full py-3 rounded-xl btn-primary text-xs font-bold disabled:opacity-60"
               >
                 {authSubmitting ? 'Dispatching...' : 'Send Password Recovery Instructions'}
               </button>
@@ -852,6 +900,15 @@ export const AdminPanelPage: React.FC = () => {
           amountBdt: verifyAmount,
         }),
       });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.toLowerCase().includes('application/json')) {
+        addToast(
+          'Node Backend Required',
+          'Payment API test endpoint is only available when running the Node.js server (server.ts).',
+          'info'
+        );
+        return;
+      }
       const data = await res.json();
       setBackendTestOutput(JSON.stringify(data, null, 2));
       if (res.ok) {
@@ -874,6 +931,15 @@ export const AdminPanelPage: React.FC = () => {
         },
         body: JSON.stringify({ orderId, playerUid, diamonds }),
       });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.toLowerCase().includes('application/json')) {
+        addToast(
+          'Node Backend Required',
+          'Server voucher issuing requires Node.js backend hosting (server.ts).',
+          'info'
+        );
+        return;
+      }
       const data = await res.json();
       setBackendTestOutput(JSON.stringify(data, null, 2));
       if (res.ok) {

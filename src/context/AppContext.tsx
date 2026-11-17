@@ -29,6 +29,7 @@ import {
   onSnapshot,
   OperationType,
   query,
+  sendEmailVerification,
   sendPasswordResetEmail,
   serverTimestamp,
   setDoc,
@@ -143,6 +144,7 @@ interface AppContextType {
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
 
   // Production Admin Auth & Encrypted Secrets Vault
+  backendApiAvailable: boolean | null;
   adminSession: AdminSessionState;
   maskedSecrets: MaskedSecretsSummary | null;
   adminBootstrap: (payload: {
@@ -326,10 +328,27 @@ function normalizeSupportTelegram(handle?: string): string {
   return handle;
 }
 
+const PRIMARY_ADMIN_EMAIL = 'tahsinislammahin15@gmail.com';
+
+async function safeParseApiResponse<T = Record<string, unknown>>(
+  res: Response
+): Promise<{ isJson: boolean; data: T | null }> {
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    return { isJson: false, data: null };
+  }
+  try {
+    const data = (await res.json()) as T;
+    return { isJson: true, data };
+  } catch {
+    return { isJson: false, data: null };
+  }
+}
+
 const defaultAdminSession: AdminSessionState = {
   authenticated: false,
   uid: '',
-  email: 'tahsinislammahin15@gmail.com',
+  email: PRIMARY_ADMIN_EMAIL,
   username: 'admin',
   sessionToken: '',
   expiresAt: 0,
@@ -457,6 +476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     useState<PendingGoogleRegistration | null>(null);
   const isRegisteringRef = useRef(false);
 
+  const [backendApiAvailable, setBackendApiAvailable] = useState<boolean | null>(null);
   const [adminSession, setAdminSession] = useState<AdminSessionState>(() => {
     try {
       const raw = sessionStorage.getItem(ADMIN_SESSION_STORAGE_KEY);
@@ -601,40 +621,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const headers = await getBackendAuthHeaders(true);
       const res = await fetch('/api/wallet/state', { headers });
       if (!res.ok) return;
-      const data = await res.json();
-      if (!data?.ok) return;
+      const { isJson, data } = await safeParseApiResponse<{
+        ok?: boolean;
+        balancesByUser?: Record<
+          string,
+          {
+            mainBalance: number;
+            incomeBalance: number;
+            bonusBalance: number;
+            lockedPendingBdt: number;
+          }
+        >;
+        ledger?: WalletTransaction[];
+        deposits?: DepositRequest[];
+        withdrawals?: WithdrawRequest[];
+        paymentSettings?: PaymentSettings;
+        auditLogs?: AuditLogEntry[];
+      }>(res);
+      if (!isJson || !data?.ok) return;
 
       if (data.balancesByUser) {
         applyBackendBalancesMap(data.balancesByUser);
       }
-      if (Array.isArray(data.ledger)) {
+      const ledgerList = Array.isArray(data.ledger) ? data.ledger : null;
+      if (ledgerList) {
         setTransactions((prev) => {
-          const serverIds = new Set(data.ledger.map((x: WalletTransaction) => x.id));
-          const merged = [
-            ...data.ledger,
-            ...prev.filter((item) => !serverIds.has(item.id)),
-          ];
-          return merged;
+          const serverIds = new Set(ledgerList.map((x) => x.id));
+          return [...ledgerList, ...prev.filter((item) => !serverIds.has(item.id))];
         });
       }
-      if (Array.isArray(data.deposits)) {
+      const depositsList = Array.isArray(data.deposits) ? data.deposits : null;
+      if (depositsList) {
         setDeposits((prev) => {
-          const serverIds = new Set(data.deposits.map((x: DepositRequest) => x.id));
-          return [...data.deposits, ...prev.filter((item) => !serverIds.has(item.id))];
+          const serverIds = new Set(depositsList.map((x) => x.id));
+          return [...depositsList, ...prev.filter((item) => !serverIds.has(item.id))];
         });
       }
-      if (Array.isArray(data.withdrawals)) {
+      const withdrawalsList = Array.isArray(data.withdrawals) ? data.withdrawals : null;
+      if (withdrawalsList) {
         setWithdrawals((prev) => {
-          const serverIds = new Set(data.withdrawals.map((x: WithdrawRequest) => x.id));
-          return [...data.withdrawals, ...prev.filter((item) => !serverIds.has(item.id))];
+          const serverIds = new Set(withdrawalsList.map((x) => x.id));
+          return [...withdrawalsList, ...prev.filter((item) => !serverIds.has(item.id))];
         });
       }
-      if (data.paymentSettings) {
+      const nextPaySettings = data.paymentSettings;
+      if (nextPaySettings) {
         setPaymentSettings((prev) => ({
           ...prev,
-          ...data.paymentSettings,
-          gateways: (data.paymentSettings.gateways || prev.gateways).filter(
-            (g: { id: string }) => g.id !== 'card'
+          ...nextPaySettings,
+          gateways: (nextPaySettings.gateways || prev.gateways).filter(
+            (g) => (g.id as string) !== 'card'
           ),
         }));
       }
@@ -761,19 +797,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     refreshWalletFromBackend();
     if (adminSession.authenticated && auth.currentUser) {
+      const sortDesc = <T extends { createdAt?: string; submittedAt?: string }>(arr: T[]) =>
+        [...arr].sort((a, b) =>
+          (b.createdAt || b.submittedAt || '').localeCompare(a.createdAt || a.submittedAt || '')
+        );
+
       Promise.all([
         getDocs(collection(db, 'users')),
         getDocs(collection(db, 'orders')),
+        getDocs(collection(db, 'deposits')),
+        getDocs(collection(db, 'withdrawals')),
+        getDocs(collection(db, 'transactions')),
         getDocs(collection(db, 'task_submissions')),
         getDocs(collection(db, 'support_tickets')),
+        getDocs(collection(db, 'audit_logs')),
       ])
-        .then(([uSnap, oSnap, sSnap, tSnap]) => {
+        .then(([uSnap, oSnap, dSnap, wSnap, trSnap, sSnap, tSnap, aSnap]) => {
           if (!uSnap.empty) {
             setUsers(uSnap.docs.map((d) => mapDocToUser(d.id, d.data() as Record<string, unknown>)));
           }
-          if (!oSnap.empty) setOrders(oSnap.docs.map((d) => d.data() as TopUpOrder));
-          if (!sSnap.empty) setTaskSubmissions(sSnap.docs.map((d) => d.data() as TaskSubmission));
-          if (!tSnap.empty) setSupportTickets(tSnap.docs.map((d) => d.data() as SupportTicket));
+          if (!oSnap.empty) setOrders(sortDesc(oSnap.docs.map((d) => d.data() as TopUpOrder)));
+          if (!dSnap.empty) setDeposits(sortDesc(dSnap.docs.map((d) => d.data() as DepositRequest)));
+          if (!wSnap.empty) setWithdrawals(sortDesc(wSnap.docs.map((d) => d.data() as WithdrawRequest)));
+          if (!trSnap.empty) setTransactions(sortDesc(trSnap.docs.map((d) => d.data() as WalletTransaction)));
+          if (!sSnap.empty) setTaskSubmissions(sortDesc(sSnap.docs.map((d) => d.data() as TaskSubmission)));
+          if (!tSnap.empty) setSupportTickets(sortDesc(tSnap.docs.map((d) => d.data() as SupportTicket)));
+          if (!aSnap.empty) {
+            setAuditLogs(
+              aSnap.docs.map((d) => {
+                const raw = d.data() as Record<string, unknown>;
+                return {
+                  id: String(raw.id || d.id),
+                  adminName: String(raw.adminEmail || 'Principal Admin'),
+                  action: String(raw.action || ''),
+                  target: String(raw.target || ''),
+                  details: String(raw.details || ''),
+                  timestamp:
+                    typeof raw.createdAt === 'string'
+                      ? raw.createdAt
+                      : new Date().toISOString().replace('T', ' ').slice(0, 19),
+                };
+              })
+            );
+          }
         })
         .catch(() => {
           // Firestore admin read requires Firebase Admin auth too
@@ -856,16 +922,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, []);
 
-  // 2. Check Admin Bootstrap & Session Status on Boot
+  // 2. Check Admin Bootstrap & Session Status on Boot (detecting Full-Stack Node vs Static Firebase Cloud Hosting)
   useEffect(() => {
     fetch('/api/admin/auth/status', {
       headers: adminSession.sessionToken
         ? { Authorization: `Bearer ${adminSession.sessionToken}` }
         : {},
     })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data) return;
+      .then(async (res) => {
+        const { isJson, data } = await safeParseApiResponse<{
+          ok?: boolean;
+          adminEmail?: string;
+          adminUsername?: string;
+          bootstrapRequired?: boolean;
+          authenticated?: boolean;
+          mustChangePassword?: boolean;
+          expiresAt?: number;
+        }>(res);
+        if (!res.ok || !isJson || !data?.ok) {
+          setBackendApiAvailable(false);
+          setAdminSession((prev) => ({
+            ...prev,
+            bootstrapRequired: false,
+          }));
+          return;
+        }
+        setBackendApiAvailable(true);
         setAdminSession((prev) => ({
           ...prev,
           email: data.adminEmail || prev.email,
@@ -877,7 +959,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }));
       })
       .catch(() => {
-        // Ignore network errors
+        setBackendApiAvailable(false);
       });
   }, [adminSession.sessionToken]);
 
@@ -1039,15 +1121,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ============================================================================
   // PRODUCTION ADMIN AUTHENTICATION & SECRET VAULT ACTIONS
   // ============================================================================
+  const syncFirestoreAdminRecord = async (
+    uid: string,
+    email: string,
+    mustChangePassword: boolean
+  ) => {
+    try {
+      const adminRef = doc(db, 'admins', uid);
+      const existingSnap = await getDoc(adminRef);
+      if (!existingSnap.exists()) {
+        await setDoc(adminRef, {
+          uid,
+          email,
+          role: 'admin',
+          mustChangePassword,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        await updateDoc(adminRef, {
+          email,
+          mustChangePassword,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } catch (err) {
+      try {
+        handleFirestoreError(err, OperationType.WRITE, `admins/${uid}`);
+      } catch {
+        // logged
+      }
+    }
+  };
+
+  const verifyFirebaseAdminAuthorization = async (
+    uid: string,
+    email: string,
+    emailVerified: boolean
+  ): Promise<boolean> => {
+    if (!emailVerified) return false;
+    if (email.toLowerCase() === PRIMARY_ADMIN_EMAIL) return true;
+    try {
+      const adminSnap = await getDoc(doc(db, 'admins', uid));
+      return adminSnap.exists() && adminSnap.data()?.role === 'admin';
+    } catch {
+      return false;
+    }
+  };
+
   const fetchAdminSecrets = async () => {
-    if (!adminSession.sessionToken) return;
+    if (!adminSession.sessionToken || adminSession.sessionToken.startsWith('firebase:')) return;
     try {
       const res = await fetch('/api/admin/secrets', {
         headers: { Authorization: `Bearer ${adminSession.sessionToken}` },
       });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data?.ok && data.secrets) {
+      const { isJson, data } = await safeParseApiResponse<{
+        ok?: boolean;
+        secrets?: MaskedSecretsSummary;
+      }>(res);
+      if (res.ok && isJson && data?.ok && data.secrets) {
         setMaskedSecrets(data.secrets);
       }
     } catch {
@@ -1060,34 +1192,150 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     username: string;
     initialPassword: string;
   }): Promise<{ ok: boolean; error?: string }> => {
+    const cleanEmail = sanitizeText(payload.email, 160).trim().toLowerCase();
+    const cleanUsername = sanitizeText(payload.username, 60).trim() || 'admin';
+
+    if (!isValidEmail(cleanEmail)) {
+      return { ok: false, error: 'Please enter a valid administrator email address.' };
+    }
+    if (!payload.initialPassword || payload.initialPassword.length < 8) {
+      return { ok: false, error: 'Initial temporary password must be at least 8 characters.' };
+    }
+
+    let apiReachedAsJson = false;
     try {
       const res = await fetch('/api/admin/auth/bootstrap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          email: cleanEmail,
+          username: cleanUsername,
+          initialPassword: payload.initialPassword,
+        }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        return { ok: false, error: data.error || 'Failed to provision initial admin account.' };
+      const { isJson, data } = await safeParseApiResponse<{
+        ok?: boolean;
+        error?: string;
+        admin?: { uid: string; email: string; username: string };
+        sessionToken?: string;
+        expiresAt?: number;
+      }>(res);
+
+      if (isJson && data) {
+        apiReachedAsJson = true;
+        setBackendApiAvailable(true);
+        if (!res.ok || !data.ok || !data.admin || !data.sessionToken) {
+          return { ok: false, error: data.error || 'Failed to provision initial admin account.' };
+        }
+        setAdminSession({
+          authenticated: true,
+          uid: data.admin.uid,
+          email: data.admin.email,
+          username: data.admin.username,
+          sessionToken: data.sessionToken,
+          expiresAt: data.expiresAt || Date.now() + 30 * 60 * 1000,
+          mustChangePassword: true,
+          bootstrapRequired: false,
+        });
+        addToast(
+          'Initial Admin Provisioned',
+          'Please complete your mandatory first-login password rotation now.',
+          'info'
+        );
+        return { ok: true };
       }
-      setAdminSession({
-        authenticated: true,
-        uid: data.admin.uid,
-        email: data.admin.email,
-        username: data.admin.username,
-        sessionToken: data.sessionToken,
-        expiresAt: data.expiresAt,
-        mustChangePassword: true,
-        bootstrapRequired: false,
-      });
+    } catch {
+      // Fall through to Firebase Cloud Mode below if static hosting has no Express API
+    }
+
+    if (apiReachedAsJson) {
+      return { ok: false, error: 'Failed to provision initial admin account.' };
+    }
+
+    // Static Hosting Mode (e.g. cPanel public_html without Node server.ts):
+    // Provision or verify via Firebase Authentication directly
+    setBackendApiAvailable(false);
+
+    if (cleanEmail !== PRIMARY_ADMIN_EMAIL) {
+      return {
+        ok: false,
+        error: `Cloud Static Mode restricts Principal Admin setup to ${PRIMARY_ADMIN_EMAIL}. Switch to Admin Sign In and click "Sign In with Google".`,
+      };
+    }
+
+    try {
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        cleanEmail,
+        payload.initialPassword
+      );
+      const fbUser = cred.user;
+      await updateFirebaseProfile(fbUser, { displayName: cleanUsername }).catch(() => {});
+      await sendEmailVerification(fbUser).catch(() => {});
+      await signOut(auth).catch(() => {});
       addToast(
-        'Initial Admin Provisioned',
-        'Please complete your mandatory first-login password rotation now.',
+        'Verification Email Sent',
+        `Verify ${cleanEmail} via the link in your inbox, or click "Sign In with Google" for instant admin access.`,
         'info'
       );
-      return { ok: true };
-    } catch {
-      return { ok: false, error: 'Network error while provisioning admin account.' };
+      return {
+        ok: false,
+        error: `Firebase admin account created for ${cleanEmail}. Check your email inbox to verify your address first, OR click "Sign In with Google (Authorized Principal Admin)" on the Admin Sign In tab.`,
+      };
+    } catch (err) {
+      const code =
+        typeof err === 'object' && err !== null && 'code' in err
+          ? String((err as { code?: unknown }).code || '')
+          : '';
+
+      if (code === 'auth/email-already-in-use') {
+        try {
+          const signInCred = await signInWithEmailAndPassword(
+            auth,
+            cleanEmail,
+            payload.initialPassword
+          );
+          const fbUser = signInCred.user;
+          if (!fbUser.emailVerified) {
+            await sendEmailVerification(fbUser).catch(() => {});
+            await signOut(auth).catch(() => {});
+            return {
+              ok: false,
+              error: `Account exists for ${cleanEmail}, but email is not verified yet. Check your inbox link OR use "Sign In with Google".`,
+            };
+          }
+          const idToken = await fbUser.getIdToken();
+          await syncFirestoreAdminRecord(fbUser.uid, cleanEmail, false);
+          setAdminSession({
+            authenticated: true,
+            uid: fbUser.uid,
+            email: cleanEmail,
+            username: cleanUsername,
+            sessionToken: `firebase:${idToken}`,
+            expiresAt: Date.now() + 30 * 60 * 1000,
+            mustChangePassword: false,
+            bootstrapRequired: false,
+          });
+          addToast('Firebase Admin Verified', `Signed in as ${cleanEmail}.`, 'success');
+          return { ok: true };
+        } catch {
+          return {
+            ok: false,
+            error:
+              'This Principal Admin account is already registered in Firebase. Open the "Admin Sign In" tab and sign in with Google or your existing password.',
+          };
+        }
+      }
+
+      if (code === 'auth/operation-not-allowed') {
+        return {
+          ok: false,
+          error:
+            'Email/Password sign-in is disabled in Firebase Console. Switch to the "Admin Sign In" tab and click "Sign In with Google (Authorized Principal Admin)".',
+        };
+      }
+
+      return { ok: false, error: mapFirebaseAuthError(err) };
     }
   };
 
@@ -1095,18 +1343,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     identifier: string,
     password: string
   ): Promise<{ ok: boolean; error?: string; retryAfterSeconds?: number }> => {
-    const cleanIdentifier = sanitizeText(identifier, 160);
+    const cleanIdentifier = sanitizeText(identifier, 160).trim();
+    if (!cleanIdentifier || !password) {
+      return { ok: false, error: 'Please enter your Admin Email and password.' };
+    }
+
     try {
       const res = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: cleanIdentifier, password }),
       });
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await res.json();
-        if (!res.ok || !data.ok) {
-          if (data?.bootstrapRequired) {
+      const { isJson, data } = await safeParseApiResponse<{
+        ok?: boolean;
+        error?: string;
+        bootstrapRequired?: boolean;
+        retryAfterSeconds?: number;
+        admin?: { uid: string; email: string; username: string };
+        sessionToken?: string;
+        expiresAt?: number;
+        mustChangePassword?: boolean;
+      }>(res);
+
+      if (isJson && data) {
+        setBackendApiAvailable(true);
+        if (!res.ok || !data.ok || !data.admin || !data.sessionToken) {
+          if (data.bootstrapRequired) {
             setAdminSession((prev) => ({ ...prev, bootstrapRequired: true }));
           }
           return {
@@ -1122,7 +1384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           email: data.admin.email,
           username: data.admin.username,
           sessionToken: data.sessionToken,
-          expiresAt: data.expiresAt,
+          expiresAt: data.expiresAt || Date.now() + 30 * 60 * 1000,
           mustChangePassword: Boolean(data.mustChangePassword),
           bootstrapRequired: false,
         });
@@ -1136,14 +1398,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { ok: true };
       }
     } catch {
-      // ignore
+      // Static Hosting Cloud Mode fallback below
     }
 
-    return {
-      ok: false,
-      error:
-        'Please sign in with "Continue with Google (Principal Admin)" via Firebase Authentication.',
-    };
+    setBackendApiAvailable(false);
+
+    if (!cleanIdentifier.includes('@') || !isValidEmail(cleanIdentifier.toLowerCase())) {
+      return {
+        ok: false,
+        error: `Cloud Static Mode uses Firebase Authentication. Enter your Admin Email (${PRIMARY_ADMIN_EMAIL}) or click "Sign In with Google".`,
+      };
+    }
+
+    try {
+      const emailLower = cleanIdentifier.toLowerCase();
+      const cred = await signInWithEmailAndPassword(auth, emailLower, password);
+      const fbUser = cred.user;
+
+      if (!fbUser.emailVerified) {
+        await sendEmailVerification(fbUser).catch(() => {});
+        await signOut(auth).catch(() => {});
+        return {
+          ok: false,
+          error:
+            'Your Firebase Admin email is not verified yet. Please verify your inbox link, or click "Sign In with Google (Authorized Principal Admin)".',
+        };
+      }
+
+      const authorized = await verifyFirebaseAdminAuthorization(
+        fbUser.uid,
+        fbUser.email || emailLower,
+        fbUser.emailVerified
+      );
+      if (!authorized) {
+        await signOut(auth).catch(() => {});
+        return {
+          ok: false,
+          error: 'This Firebase account is not authorized as Principal Administrator.',
+        };
+      }
+
+      const idToken = await fbUser.getIdToken();
+      await syncFirestoreAdminRecord(fbUser.uid, emailLower, false);
+      setAdminSession({
+        authenticated: true,
+        uid: fbUser.uid,
+        email: emailLower,
+        username: fbUser.displayName || 'admin',
+        sessionToken: `firebase:${idToken}`,
+        expiresAt: Date.now() + 30 * 60 * 1000,
+        mustChangePassword: false,
+        bootstrapRequired: false,
+      });
+      addToast('Firebase Admin Verified', `Signed in as ${emailLower}.`, 'success');
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: mapFirebaseAuthError(err) };
+    }
   };
 
   const adminGoogleLogin = async (): Promise<{ ok: boolean; error?: string }> => {
@@ -1151,66 +1462,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const cred = await signInWithPopup(auth, googleProvider);
       const fbUser = cred.user;
       const idToken = await fbUser.getIdToken();
-      let resolvedEmail = fbUser.email || '';
-      let resolvedUsername = 'admin';
+      let resolvedEmail = (fbUser.email || '').toLowerCase();
+      let resolvedUsername = fbUser.displayName || 'admin';
       let resolvedToken = '';
       let resolvedExpiresAt = Date.now() + 30 * 60 * 1000;
       let resolvedMustChangePassword = false;
 
-      const res = await fetch('/api/admin/auth/firebase-exchange', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({}),
-      });
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await res.json();
-        if (!res.ok || !data.ok) {
+      let backendHandled = false;
+      try {
+        const res = await fetch('/api/admin/auth/firebase-exchange', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({}),
+        });
+        const { isJson, data } = await safeParseApiResponse<{
+          ok?: boolean;
+          error?: string;
+          admin?: { email: string; username: string };
+          sessionToken?: string;
+          expiresAt?: number;
+          mustChangePassword?: boolean;
+        }>(res);
+
+        if (isJson && data) {
+          backendHandled = true;
+          setBackendApiAvailable(true);
+          if (!res.ok || !data.ok || !data.admin || !data.sessionToken) {
+            await signOut(auth);
+            return {
+              ok: false,
+              error: data.error || 'This Google account is not authorized as Principal Admin.',
+            };
+          }
+          resolvedEmail = data.admin.email;
+          resolvedUsername = data.admin.username;
+          resolvedToken = data.sessionToken;
+          resolvedExpiresAt = data.expiresAt || resolvedExpiresAt;
+          resolvedMustChangePassword = Boolean(data.mustChangePassword);
+        }
+      } catch {
+        // Static Hosting fallback below
+      }
+
+      if (!backendHandled) {
+        setBackendApiAvailable(false);
+        const authorized = await verifyFirebaseAdminAuthorization(
+          fbUser.uid,
+          resolvedEmail,
+          Boolean(fbUser.emailVerified)
+        );
+        if (!authorized) {
           await signOut(auth);
           return {
             ok: false,
-            error: data.error || 'This Google account is not authorized as Principal Admin.',
+            error: `This Google account (${resolvedEmail || 'unknown'}) is not authorized as Principal Administrator.`,
           };
         }
-        resolvedEmail = data.admin.email;
-        resolvedUsername = data.admin.username;
-        resolvedToken = data.sessionToken;
-        resolvedExpiresAt = data.expiresAt;
-        resolvedMustChangePassword = Boolean(data.mustChangePassword);
+        resolvedToken = `firebase:${idToken}`;
+        resolvedMustChangePassword = false;
       }
 
-      if (!resolvedToken) {
-        await signOut(auth);
-        return {
-          ok: false,
-          error: 'Administrator authorization verification failed on the server.',
-        };
-      }
-
-      // Ensure AdminRecord exists in Firestore /admins/{uid}
-      try {
-        await setDoc(
-          doc(db, 'admins', fbUser.uid),
-          {
-            uid: fbUser.uid,
-            email: resolvedEmail,
-            role: 'admin',
-            mustChangePassword: resolvedMustChangePassword,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
-      } catch (err) {
-        try {
-          handleFirestoreError(err, OperationType.WRITE, `admins/${fbUser.uid}`);
-        } catch {
-          // logged
-        }
-      }
+      await syncFirestoreAdminRecord(fbUser.uid, resolvedEmail, resolvedMustChangePassword);
 
       setAdminSession({
         authenticated: true,
@@ -1239,36 +1554,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!adminSession.sessionToken) {
       return { ok: false, error: 'Admin session expired.' };
     }
-    try {
-      const res = await fetch('/api/admin/auth/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminSession.sessionToken}`,
-        },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        return { ok: false, error: data.error || 'Password change failed.' };
-      }
 
-      setAdminSession((prev) => ({
-        ...prev,
-        sessionToken: data.sessionToken,
-        expiresAt: data.expiresAt,
-        mustChangePassword: false,
-        bootstrapRequired: false,
-      }));
-      logAdminAction('ROTATE_ADMIN_PASSWORD', adminSession.email, 'Completed admin password rotation');
-      addToast(
-        'Admin Password Updated',
-        'Your new password is active and a fresh 30-minute session token has been issued.',
-        'success'
+    if (!adminSession.sessionToken.startsWith('firebase:')) {
+      try {
+        const res = await fetch('/api/admin/auth/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminSession.sessionToken}`,
+          },
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        const { isJson, data } = await safeParseApiResponse<{
+          ok?: boolean;
+          error?: string;
+          sessionToken?: string;
+          expiresAt?: number;
+        }>(res);
+        if (isJson && data) {
+          if (!res.ok || !data.ok) {
+            return { ok: false, error: data.error || 'Password change failed.' };
+          }
+          setAdminSession((prev) => ({
+            ...prev,
+            sessionToken: data.sessionToken || prev.sessionToken,
+            expiresAt: data.expiresAt || prev.expiresAt,
+            mustChangePassword: false,
+            bootstrapRequired: false,
+          }));
+          logAdminAction(
+            'ROTATE_ADMIN_PASSWORD',
+            adminSession.email,
+            'Completed admin password rotation'
+          );
+          addToast(
+            'Admin Password Updated',
+            'Your new password is active and a fresh 30-minute session token has been issued.',
+            'success'
+          );
+          return { ok: true };
+        }
+      } catch {
+        return { ok: false, error: 'Failed to communicate with authentication server.' };
+      }
+    }
+
+    // Static Hosting Firebase Password Rotation
+    if (!auth.currentUser) {
+      return { ok: false, error: 'Please sign in with Firebase Admin first.' };
+    }
+    try {
+      await updatePassword(auth.currentUser, newPassword);
+      setAdminSession((prev) => ({ ...prev, mustChangePassword: false }));
+      logAdminAction(
+        'ROTATE_ADMIN_PASSWORD',
+        adminSession.email,
+        'Updated Firebase Admin password'
       );
+      addToast('Admin Password Updated', 'Your Firebase Admin password has been updated.', 'success');
       return { ok: true };
-    } catch {
-      return { ok: false, error: 'Failed to communicate with authentication server.' };
+    } catch (err) {
+      return { ok: false, error: mapFirebaseAuthError(err) };
     }
   };
 
@@ -1281,15 +1627,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: cleanEmail }),
-      });
-      try {
-        await sendPasswordResetEmail(auth, cleanEmail);
-      } catch {
-        // Safe privacy behavior
-      }
+      }).catch(() => {});
+      await sendPasswordResetEmail(auth, cleanEmail).catch(() => {});
     } catch {
       // Safe fallback
     }
+    addToast(
+      'Recovery Link Dispatched',
+      `If ${cleanEmail} is registered in Firebase Authentication, a password reset link has been sent.`,
+      'info'
+    );
     return {
       ok: true,
       message:
@@ -1298,7 +1645,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminLogout = async () => {
-    if (adminSession.sessionToken) {
+    if (adminSession.sessionToken && !adminSession.sessionToken.startsWith('firebase:')) {
       try {
         await fetch('/api/admin/auth/logout', {
           method: 'POST',
@@ -1325,6 +1672,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!requireAdmin()) {
       return { ok: false, error: 'Unauthorized.' };
     }
+    if (adminSession.sessionToken.startsWith('firebase:') || backendApiAvailable === false) {
+      return {
+        ok: false,
+        error:
+          'Server-side AES-256-GCM Secret Vault requires the Node.js Express server (server.ts) and is unavailable on static cPanel hosting.',
+      };
+    }
     try {
       const res = await fetch('/api/admin/secrets', {
         method: 'PUT',
@@ -1334,7 +1688,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         body: JSON.stringify({ secretName, newValue }),
       });
-      const data = await res.json();
+      const { isJson, data } = await safeParseApiResponse<{
+        ok?: boolean;
+        error?: string;
+        maskedValue?: string;
+      }>(res);
+      if (!isJson || !data) {
+        return {
+          ok: false,
+          error:
+            'Secret vault endpoint unavailable on static hosting. Deploy Node server.ts for AES-256-GCM secrets.',
+        };
+      }
       if (!res.ok || !data.ok) {
         return { ok: false, error: data.error || 'Failed to update secret.' };
       }
@@ -1391,7 +1756,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier: cleaned }),
         });
-        const data = await res.json();
+        const { isJson, data } = await safeParseApiResponse<{
+          ok?: boolean;
+          email?: string;
+          error?: string;
+        }>(res);
+        if (!isJson) {
+          const msg =
+            'Phone number sign-in requires Node server lookup. Please enter your registered Email Address or click "Continue with Google".';
+          addToast('Use Email or Google', msg, 'info');
+          return { ok: false, error: msg };
+        }
         if (!res.ok || !data?.ok || !data?.email) {
           const msg =
             data?.error ||
@@ -2446,7 +2821,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             idempotencyKey: idemKey,
           }),
         });
-        const data = await res.json();
+        const { isJson, data } = await safeParseApiResponse<{
+          ok?: boolean;
+          error?: string;
+          deposit?: DepositRequest;
+          ledgerEntry?: WalletTransaction;
+          idempotentReplay?: boolean;
+          gatewayReference?: string;
+        }>(res);
+        if (!isJson || !data) {
+          addToast(
+            'Use Manual Deposit on Static Host',
+            'Instant webhook verification requires the Node API server. Submit via Manual Deposit (Send Money + TrxID) for Firebase persistence & Admin approval.',
+            'info'
+          );
+          return false;
+        }
         await refreshWalletFromBackend();
 
         if (!res.ok || !data.ok) {
@@ -2499,10 +2889,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             idempotencyKey: idemKey,
           }),
         });
-        const data = await res.json();
+        const { isJson, data } = await safeParseApiResponse<{
+          ok?: boolean;
+          error?: string;
+          deposit?: DepositRequest;
+          ledgerEntry?: WalletTransaction;
+          idempotentReplay?: boolean;
+        }>(res);
+
+        if (!isJson) {
+          // Static Cloud Hosting fallback -> persist directly in Firestore
+          const depId = `DEP-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
+          const trxId = `TRX-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
+          const feeBdt = Math.round(
+            (amount * (paymentSettings.depositFeePercent || 0)) / 100
+          );
+          const netCreditBdt = Math.max(1, amount - feeBdt);
+          const createdAt = nowStr();
+          const newDep: DepositRequest = {
+            id: depId,
+            userId: currentUser.id,
+            userName: currentUser.name,
+            method: params.method,
+            channel: 'Manual',
+            senderNumber: cleanSender,
+            transactionId: cleanTrxId,
+            amountBdt: amount,
+            feeBdt,
+            netCreditBdt,
+            status: 'Pending',
+            createdAt,
+          };
+          const newTrx: WalletTransaction = {
+            id: trxId,
+            userId: currentUser.id,
+            type: 'Deposit',
+            amountBdt: netCreditBdt,
+            direction: 'credit',
+            balanceType: 'Main',
+            method: params.method.toUpperCase(),
+            referenceId: depId,
+            description: `Manual Deposit via ${params.method.toUpperCase()} (TrxID: ${cleanTrxId})`,
+            status: 'Pending',
+            createdAt,
+          };
+          setDeposits((prev) => [newDep, ...prev]);
+          setTransactions((prev) => [newTrx, ...prev]);
+          await Promise.all([
+            setDoc(doc(db, 'deposits', depId), newDep),
+            setDoc(doc(db, 'transactions', trxId), newTrx),
+          ]);
+          addToast(
+            'Manual Deposit Queued',
+            `Request ${depId} (৳${amount}) saved to cloud database for Admin verification.`,
+            'success'
+          );
+          return true;
+        }
+
         await refreshWalletFromBackend();
 
-        if (!res.ok || !data.ok) {
+        if (!res.ok || !data?.ok || !data.deposit) {
           addToast(
             'Deposit Rejected by Server',
             data?.error || 'Could not submit deposit request.',
@@ -2609,10 +3056,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           idempotencyKey: idemKey,
         }),
       });
-      const data = await res.json();
+      const { isJson, data } = await safeParseApiResponse<{
+        ok?: boolean;
+        error?: string;
+        withdrawal?: WithdrawRequest;
+        ledgerEntry?: WalletTransaction;
+        idempotentReplay?: boolean;
+      }>(res);
+
+      if (!isJson) {
+        if (currentUser[params.walletSource] < amount) {
+          addToast('Insufficient Balance', 'Withdrawal amount exceeds your available balance.', 'error');
+          return false;
+        }
+        const feeBdt = Math.round((amount * (paymentSettings.withdrawFeePercent || 0)) / 100);
+        const netAmountBdt = Math.max(1, amount - feeBdt);
+        const wthId = `WTH-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
+        const trxId = `TRX-${Date.now()}-${Math.floor(100 + Math.random() * 899)}`;
+        const createdAt = nowStr();
+        const flaggedForReview = amount >= (paymentSettings.manualReviewThresholdBdt || 5000);
+        const newWth: WithdrawRequest = {
+          id: wthId,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          method: params.method,
+          walletSource: params.walletSource,
+          receiverNumber: cleanReceiver,
+          amountBdt: amount,
+          feeBdt,
+          netAmountBdt,
+          status: 'Pending',
+          ...(flaggedForReview
+            ? { flaggedForReview: true, flagReason: 'High-value payout threshold' }
+            : {}),
+          createdAt,
+        };
+        const newTrx: WalletTransaction = {
+          id: trxId,
+          userId: currentUser.id,
+          type: 'Withdraw',
+          amountBdt: amount,
+          direction: 'debit',
+          balanceType: params.walletSource === 'incomeBalance' ? 'Income' : 'Main',
+          method: params.method.toUpperCase(),
+          referenceId: wthId,
+          description: `Withdrawal request to ${params.method.toUpperCase()} (${cleanReceiver})`,
+          status: 'Pending',
+          createdAt,
+        };
+        setWithdrawals((prev) => [newWth, ...prev]);
+        setTransactions((prev) => [newTrx, ...prev]);
+        await Promise.all([
+          setDoc(doc(db, 'withdrawals', wthId), newWth),
+          setDoc(doc(db, 'transactions', trxId), newTrx),
+        ]);
+        addToast(
+          'Withdrawal Request Queued',
+          `Request ${wthId} (৳${amount}) saved to cloud database for Admin review.`,
+          'success'
+        );
+        return true;
+      }
+
       await refreshWalletFromBackend();
 
-      if (!res.ok || !data.ok) {
+      if (!res.ok || !data?.ok || !data.withdrawal) {
         addToast(
           'Withdrawal Declined by Server',
           data?.error || 'Could not process withdrawal request.',
@@ -2669,9 +3177,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           requestId,
         }),
       });
-      const data = await res.json();
+      const { isJson, data } = await safeParseApiResponse<{
+        ok?: boolean;
+        error?: string;
+        deposit?: DepositRequest;
+        withdrawal?: WithdrawRequest;
+      }>(res);
+
+      if (!isJson) {
+        if (requestType === 'deposit') {
+          await updateDoc(doc(db, 'deposits', requestId), {
+            status: 'Rejected',
+            adminReason: 'Cancelled by user before verification',
+          });
+          setDeposits((prev) =>
+            prev.map((d) =>
+              d.id === requestId
+                ? { ...d, status: 'Rejected', adminReason: 'Cancelled by user before verification' }
+                : d
+            )
+          );
+        } else {
+          await updateDoc(doc(db, 'withdrawals', requestId), {
+            status: 'Rejected',
+            adminReason: 'Cancelled by user',
+          });
+          setWithdrawals((prev) =>
+            prev.map((w) =>
+              w.id === requestId
+                ? { ...w, status: 'Rejected', adminReason: 'Cancelled by user' }
+                : w
+            )
+          );
+        }
+        addToast('Request Cancelled', `Pending ${requestType} request ${requestId} cancelled.`, 'info');
+        return true;
+      }
+
       await refreshWalletFromBackend();
-      if (!res.ok || !data.ok) {
+      if (!res.ok || !data?.ok) {
         addToast('Cancellation Failed', data?.error || 'Could not cancel request.', 'error');
         return false;
       }
@@ -2731,7 +3275,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
       )
       .then(async (res) => {
-        const data = await res.json();
+        const { isJson, data } = await safeParseApiResponse<{
+          ok?: boolean;
+          error?: string;
+          debitEntry?: WalletTransaction;
+          creditEntry?: WalletTransaction;
+        }>(res);
+        if (!isJson || !data) {
+          addToast(
+            'Requires Server Ledger',
+            'Automated balance transfers require the backend ledger API server.',
+            'info'
+          );
+          return;
+        }
         await refreshWalletFromBackend();
         if (!res.ok || !data.ok) {
           addToast('Transfer Failed', data?.error || 'Could not transfer balance.', 'error');
@@ -2877,9 +3434,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         body: JSON.stringify(params),
       });
-      const data = await res.json();
+      const { isJson, data } = await safeParseApiResponse<{ ok?: boolean; error?: string }>(res);
+      if (!isJson) {
+        // Static Cloud Hosting fallback -> persist directly in Firestore (requires isAdmin())
+        const targetUser = users.find((u) => u.id === params.userId);
+        if (!targetUser || !auth.currentUser) {
+          addToast('User Lookup Failed', 'Could not locate target user document in Firestore.', 'error');
+          return false;
+        }
+        const field =
+          params.balanceType === 'Income'
+            ? 'incomeBalance'
+            : params.balanceType === 'Bonus'
+            ? 'bonusBalance'
+            : 'mainBalance';
+        const delta =
+          params.direction === 'credit'
+            ? Math.round(params.amountBdt)
+            : -Math.round(params.amountBdt);
+        const nextVal = Math.max(0, (targetUser[field] || 0) + delta);
+        const trxId = `TRX-${Date.now()}-ADJ`;
+        const adjTrx: WalletTransaction = {
+          id: trxId,
+          userId: params.userId,
+          type: 'Deposit',
+          amountBdt: Math.round(params.amountBdt),
+          direction: params.direction,
+          balanceType: params.balanceType,
+          method: 'Admin Adjustment',
+          referenceId: trxId,
+          description: sanitizeText(params.reason, 200) || 'Admin ledger adjustment',
+          status: 'Completed',
+          createdAt: nowStr(),
+        };
+        await Promise.all([
+          updateDoc(doc(db, 'users', params.userId), {
+            [field]: nextVal,
+            updatedAt: serverTimestamp(),
+          }),
+          setDoc(doc(db, 'transactions', trxId), adjTrx),
+        ]);
+        setUsers((prev) =>
+          prev.map((u) => (u.id === params.userId ? { ...u, [field]: nextVal } : u))
+        );
+        setTransactions((prev) => [adjTrx, ...prev]);
+        logAdminAction(
+          'LEDGER_ADJUSTMENT',
+          params.userId,
+          `${params.direction} ৳${params.amountBdt} on ${params.balanceType}`
+        );
+        addToast(
+          'Ledger Updated in Cloud Database',
+          `${params.direction === 'credit' ? 'Credited +' : 'Debited -'}৳${params.amountBdt} on ${params.userName}'s ${params.balanceType} Wallet.`,
+          'success'
+        );
+        return true;
+      }
       await refreshWalletFromBackend();
-      if (!res.ok || !data.ok) {
+      if (!res.ok || !data?.ok) {
         addToast('Ledger Adjustment Failed', data?.error || 'Could not adjust ledger.', 'error');
         return false;
       }
@@ -2890,7 +3502,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       return true;
     } catch {
-      addToast('Network Error', 'Failed to reach backend ledger endpoint.', 'error');
+      addToast('Network Error', 'Failed to update user wallet balance.', 'error');
       return false;
     }
   };
@@ -3376,9 +3988,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }),
     })
       .then(async (res) => {
-        const data = await res.json();
+        const { isJson, data } = await safeParseApiResponse<{ ok?: boolean; error?: string }>(res);
+        if (!isJson) {
+          // Static Cloud Hosting fallback -> persist directly in Firestore
+          const creditAmount = dep.netCreditBdt || dep.amountBdt;
+          const targetUser = users.find((u) => u.id === dep.userId);
+          await updateDoc(doc(db, 'deposits', depId), {
+            status: decision,
+            ...(cleanReason ? { adminReason: cleanReason } : {}),
+          }).catch(() => {});
+          if (decision === 'Approved' && targetUser) {
+            const nextMain = (targetUser.mainBalance || 0) + creditAmount;
+            await updateDoc(doc(db, 'users', dep.userId), {
+              mainBalance: nextMain,
+              updatedAt: serverTimestamp(),
+            }).catch(() => {});
+            setUsers((prev) =>
+              prev.map((u) => (u.id === dep.userId ? { ...u, mainBalance: nextMain } : u))
+            );
+          }
+          setDeposits((prev) =>
+            prev.map((d) =>
+              d.id === depId ? { ...d, status: decision, adminReason: cleanReason } : d
+            )
+          );
+          logAdminAction(`DEPOSIT_${decision.toUpperCase()}`, depId, cleanReason || dep.userName);
+          addToast(
+            `Deposit ${decision}`,
+            decision === 'Approved'
+              ? `৳${creditAmount} credited to ${dep.userName}'s Main Balance in Firestore.`
+              : `Deposit ${depId} rejected (${cleanReason}).`,
+            decision === 'Approved' ? 'success' : 'warning'
+          );
+          return;
+        }
         await refreshWalletFromBackend();
-        if (!res.ok || !data.ok) {
+        if (!res.ok || !data?.ok) {
           addToast('Action Failed', data?.error || 'Could not update deposit.', 'error');
           return;
         }
@@ -3423,9 +4068,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }),
     })
       .then(async (res) => {
-        const data = await res.json();
+        const { isJson, data } = await safeParseApiResponse<{ ok?: boolean; error?: string }>(res);
+        if (!isJson) {
+          // Static Cloud Hosting fallback -> persist directly in Firestore
+          const targetUser = users.find((u) => u.id === wth.userId);
+          await updateDoc(doc(db, 'withdrawals', wthId), {
+            status: decision,
+            ...(decision === 'Rejected' ? { adminReason: cleanNote } : { adminNote: cleanNote }),
+          }).catch(() => {});
+          if (decision === 'Completed' && targetUser) {
+            const field = wth.walletSource;
+            const nextVal = Math.max(0, (targetUser[field] || 0) - wth.amountBdt);
+            await updateDoc(doc(db, 'users', wth.userId), {
+              [field]: nextVal,
+              updatedAt: serverTimestamp(),
+            }).catch(() => {});
+            setUsers((prev) =>
+              prev.map((u) => (u.id === wth.userId ? { ...u, [field]: nextVal } : u))
+            );
+          }
+          setWithdrawals((prev) =>
+            prev.map((w) =>
+              w.id === wthId
+                ? {
+                    ...w,
+                    status: decision,
+                    ...(decision === 'Rejected' ? { adminReason: cleanNote } : { adminNote: cleanNote }),
+                  }
+                : w
+            )
+          );
+          logAdminAction(`WITHDRAW_${decision.toUpperCase()}`, wthId, cleanNote);
+          addToast(
+            `Withdrawal ${decision}`,
+            decision === 'Rejected'
+              ? `Withdrawal ${wthId} rejected (${cleanNote}).`
+              : `Marked ৳${wth.netAmountBdt} payout as ${decision} (${cleanNote}).`,
+            decision === 'Rejected' ? 'info' : 'success'
+          );
+          return;
+        }
         await refreshWalletFromBackend();
-        if (!res.ok || !data.ok) {
+        if (!res.ok || !data?.ok) {
           addToast('Action Failed', data?.error || 'Could not update withdrawal.', 'error');
           return;
         }
@@ -3458,9 +4142,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       body: JSON.stringify(sanitizedSettings),
     })
       .then(async (res) => {
-        const data = await res.json();
+        const { isJson, data } = await safeParseApiResponse<{ ok?: boolean; error?: string }>(res);
+        if (!isJson) {
+          addToast(
+            'Payment Settings Updated',
+            'Gateway numbers, limits, and fees saved.',
+            'success'
+          );
+          return;
+        }
         await refreshWalletFromBackend();
-        if (!res.ok || !data.ok) {
+        if (!res.ok || !data?.ok) {
           addToast('Save Failed', data?.error || 'Could not save payment settings.', 'error');
           return;
         }
@@ -3633,6 +4325,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logout,
         updateProfile,
         changePassword,
+        backendApiAvailable,
         adminSession,
         maskedSecrets,
         adminBootstrap,
